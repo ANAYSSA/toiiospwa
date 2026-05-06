@@ -79,7 +79,7 @@ export default function MenuLayout({ children }) {
 
   return (
     <ToastProvider>
-      <div style={{ minHeight: "100vh", paddingBottom: 80 }}>
+      <div style={{ minHeight: "100vh", paddingBottom: "calc(80px + env(safe-area-inset-bottom))" }}>
         {children}
       </div>
       <nav className="bottom-nav">

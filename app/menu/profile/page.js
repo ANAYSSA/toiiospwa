@@ -168,7 +168,7 @@ export default function ProfilePage() {
       minHeight: "100dvh",
       background: darkTheme ? "#0F0F0F" : "#F8F9FA",
       color: darkTheme ? "#FFFBEB" : "#1A1A1A",
-      paddingBottom: "calc(100px + env(safe-area-inset-bottom))",
+      paddingBottom: "calc(120px + env(safe-area-inset-bottom))",
     }}>
       {/* Gradient header */}
       <div className="profile-header" style={{ position: "relative" }}>
@@ -509,7 +509,7 @@ function EditProfileModal({ user, profile, dark, onClose, onSaved, onError }) {
           <button onClick={onClose} style={btnSecondary(dark)} disabled={saving}>
             Отмена
           </button>
-          <button onClick={save} style={btnPrimary} disabled={saving}>
+          <button onClick={save} style={btnPrimary()} disabled={saving}>
             {saving ? <span className="spinner" /> : "Сохранить"}
           </button>
         </div>
@@ -575,7 +575,7 @@ function ChangePasswordModal({ dark, onClose, onSaved, onError }) {
 
         <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
           <button onClick={onClose} style={btnSecondary(dark)} disabled={saving}>Отмена</button>
-          <button onClick={save} style={btnPrimary} disabled={saving}>
+          <button onClick={save} style={btnPrimary()} disabled={saving}>
             {saving ? <span className="spinner" /> : "Сменить"}
           </button>
         </div>
