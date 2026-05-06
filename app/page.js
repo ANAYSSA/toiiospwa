@@ -14,7 +14,7 @@ function LoginInner() {
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
-      if (user) router.replace("/menu/booking");
+      if (user) router.replace("/menu/home");
     });
     return () => unsub();
   }, [router]);
@@ -29,7 +29,7 @@ function LoginInner() {
     try {
       await signInWithEmailAndPassword(auth, email.trim(), password.trim());
       showToast("Успешный вход!");
-      router.replace("/menu/booking");
+      router.replace("/menu/home");
     } catch (err) {
       const code = err.code || "";
       if (code === "auth/user-not-found" || code === "auth/invalid-credential") {
@@ -48,7 +48,6 @@ function LoginInner() {
     <div className="auth-page">
       <div className="top-glow" />
       <div style={{ position: "relative", zIndex: 1, width: "100%", display: "flex", flexDirection: "column", alignItems: "center", flex: 1 }}>
-        {/* Logo */}
         <img
           src="/icons/logo.png"
           alt="ТОЙХАНА"

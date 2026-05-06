@@ -40,7 +40,7 @@ function RegisterInner() {
       });
 
       showToast("Аккаунт успешно создан!");
-      router.replace("/menu/booking");
+      router.replace("/menu/home");
     } catch (err) {
       showToast("Ошибка регистрации: " + (err.message || err.code || "неизвестно"));
     } finally {
