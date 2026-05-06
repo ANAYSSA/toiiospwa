@@ -165,7 +165,6 @@ export default function ProfilePage() {
 
   return (
     <div style={{
-      minHeight: "100dvh",
       background: darkTheme ? "#0F0F0F" : "#F8F9FA",
       color: darkTheme ? "#FFFBEB" : "#1A1A1A",
       paddingBottom: "calc(120px + env(safe-area-inset-bottom))",
