@@ -6,67 +6,66 @@ import { useLanguage } from "@/components/LanguageContext";
 
 const REAL_HALLS = [
   { 
+    id: "palazzo",
     name: "Palazzo Di Astana", 
     city: "Астана", 
     address: "ул. Сыганак, 38", 
     price: "от 15 000 ₸/чел", 
     capacity: "до 500 гостей", 
     rating: "4.9",
-    image: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=800" 
+    reviewsCount: "342 отзыва",
+    image: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=800",
+    description: "Дворцовый стиль в самом сердце столицы. Высокие потолки (8 метров), хрустальные люстры и безупречный сервис. Подходит для масштабных свадеб и правительственных приемов.",
+    features: ["LED-экран 12x4м", "Профессиональный звук", "VIP-комнаты", "Гримерки", "Парковка на 100 машин"],
+    cuisine: "Казахская, Европейская, Авторская",
+    reviews: [
+      { user: "Арман", rating: 5, date: "2 недели назад", text: "Проводили здесь ұзату дочери. Всё прошло на высшем уровне. Кухня очень вкусная, баурсаки горячие, мясо тает во рту." },
+      { user: "Динара", rating: 5, date: "Месяц назад", text: "Шикарный интерьер! Фотографии получаются просто бомбические. Сервис очень внимательный." }
+    ]
   },
   { 
+    id: "bakshasaray",
     name: "Бакшасарай", 
     city: "Алматы", 
-    address: "ул. Тимирязева, 42", 
+    address: "ул. Тимирязева, 42к1", 
     price: "от 18 000 ₸/чел", 
     capacity: "до 700 гостей", 
     rating: "5.0",
-    image: "https://images.unsplash.com/photo-1505236858219-8359eb29e329?auto=format&fit=crop&q=80&w=800" 
+    reviewsCount: "820 отзывов",
+    image: "https://images.unsplash.com/photo-1505236858219-8359eb29e329?auto=format&fit=crop&q=80&w=800",
+    description: "Легендарный банкетный комплекс в КЦДС Атакент. Несколько залов (Gerey Khan, Pushkin, Small Hall). Уникальное сочетание восточного гостеприимства и современных технологий.",
+    features: ["Собственная кондитерская", "Летняя терраса", "Детская игровая", "Сцена-трансформер"],
+    cuisine: "Национальная, Турецкая, Мировая",
+    reviews: [
+      { user: "Марат", rating: 5, date: "3 дня назад", text: "Лучшее место в Алматы для больших тоев. Парковка огромная, места много, кондиционеры работают отлично." },
+      { user: "Гульназ", rating: 5, date: "10 дней назад", text: "Сервис 10/10. Менеджеры помогают с любым вопросом." }
+    ]
   },
   { 
+    id: "aura",
     name: "Aura Palace", 
     city: "Шымкент", 
     address: "пр. Тауке хана, 15", 
     price: "от 10 000 ₸/чел", 
     capacity: "до 400 гостей", 
     rating: "4.8",
-    image: "https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&q=80&w=800" 
-  },
-  { 
-    name: "Versailles Almaty", 
-    city: "Алматы", 
-    address: "пр. Достык, 132", 
-    price: "от 20 000 ₸/чел", 
-    capacity: "до 450 гостей", 
-    rating: "4.9",
-    image: "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=800" 
-  },
-  { 
-    name: "Wyndham Garden", 
-    city: "Астана", 
-    address: "ул. Хусейн бен Талал, 25", 
-    price: "от 22 000 ₸/чел", 
-    capacity: "до 800 гостей", 
-    rating: "5.0",
-    image: "https://images.unsplash.com/photo-1544145945-f904253db0ad?auto=format&fit=crop&q=80&w=800" 
-  },
-  { 
-    name: "Grand Narlen", 
-    city: "Шымкент", 
-    address: "ул. Байтурсынова, 20", 
-    price: "от 12 000 ₸/чел", 
-    capacity: "до 500 гостей", 
-    rating: "4.7",
-    image: "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?auto=format&fit=crop&q=80&w=800" 
-  },
+    reviewsCount: "156 отзывов",
+    image: "https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&q=80&w=800",
+    description: "Один из самых востребованных залов Шымкента. Уютная атмосфера, современный дизайн и знаменитая южная кухня.",
+    features: ["Зона для фотосессий", "Световое шоу", "Мощные кондиционеры"],
+    cuisine: "Шымкентская (лучший беш), Восточная",
+    reviews: [
+      { user: "Ербол", rating: 5, date: "Неделю назад", text: "Бешбармак просто пушка! Гости были в восторге. Зал чистый, звук хороший." }
+    ]
+  }
 ];
 
 export default function HallsPage() {
   const router = useRouter();
-  const showToast = useToast();
   const { lang } = useLanguage();
   const [darkTheme, setDarkTheme] = useState(false);
   const [filter, setFilter] = useState("Все");
+  const [selectedHall, setSelectedHall] = useState(null);
 
   useEffect(() => {
     try {
@@ -91,10 +90,10 @@ export default function HallsPage() {
       color: textPrimary, 
       minHeight: "100vh" 
     }}>
-      {/* Header */}
+      {/* List Header */}
       <div style={{
-        background: darkTheme ? "rgba(20,20,20,0.8)" : "rgba(255,255,255,0.8)",
-        backdropFilter: "blur(10px)",
+        background: darkTheme ? "rgba(10,10,10,0.8)" : "rgba(255,255,255,0.8)",
+        backdropFilter: "blur(20px)",
         paddingTop: "calc(16px + env(safe-area-inset-top))",
         paddingBottom: 12,
         paddingLeft: 20, paddingRight: 20,
@@ -120,11 +119,12 @@ export default function HallsPage() {
         </div>
       </div>
 
-      <div style={{ padding: "16px 16px 40px" }}>
-        {filtered.map((hall, idx) => (
+      {/* Hall List */}
+      <div style={{ padding: "16px 16px 120px" }}>
+        {filtered.map((hall) => (
           <div
-            key={idx}
-            onClick={() => showToast("Детали зала скоро будут доступны")}
+            key={hall.id}
+            onClick={() => setSelectedHall(hall)}
             style={{
               background: cardBg, borderRadius: 24, marginBottom: 20, overflow: "hidden",
               boxShadow: "0 10px 30px rgba(0,0,0,0.1)", cursor: "pointer", border: `1px solid ${border}`
@@ -132,37 +132,80 @@ export default function HallsPage() {
           >
             <div style={{ height: 200, position: "relative" }}>
               <img src={hall.image} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              <div style={{ position: "absolute", top: 12, right: 12, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", borderRadius: 10, padding: "6px 12px", color: "white", fontSize: 13, fontWeight: 800, display: "flex", alignItems: "center", gap: 4 }}>
-                <span style={{ color: "#FFD700" }}>★</span> {hall.rating}
-              </div>
-              <div style={{ position: "absolute", bottom: 12, left: 12, background: "rgba(168,121,53,0.9)", borderRadius: 8, padding: "4px 10px", color: "white", fontSize: 11, fontWeight: 700, textTransform: "uppercase" }}>
-                {hall.city}
+              <div style={{ position: "absolute", top: 12, right: 12, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", borderRadius: 10, padding: "6px 12px", color: "white", fontSize: 13, fontWeight: 800 }}>
+                ★ {hall.rating}
               </div>
             </div>
-
             <div style={{ padding: 20 }}>
               <div style={{ fontSize: 19, fontWeight: 800, marginBottom: 4 }}>{hall.name}</div>
-              <div style={{ fontSize: 13, color: textSecondary, display: "flex", alignItems: "center", gap: 6 }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                {hall.address}
-              </div>
-
-              <div style={{ height: 1, background: border, margin: "16px 0" }} />
-
+              <div style={{ fontSize: 13, color: textSecondary, marginBottom: 12 }}>{hall.address}</div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div>
-                  <div style={{ fontSize: 11, color: "#A87935", fontWeight: 700, textTransform: "uppercase" }}>Цена за человека</div>
-                  <div style={{ fontSize: 16, fontWeight: 800, marginTop: 2 }}>{hall.price}</div>
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 11, color: textSecondary, fontWeight: 600 }}>Вместимость</div>
-                  <div style={{ fontSize: 14, fontWeight: 700, marginTop: 2 }}>{hall.capacity}</div>
-                </div>
+                <div style={{ fontSize: 15, fontWeight: 800, color: "#A87935" }}>{hall.price}</div>
+                <div style={{ fontSize: 13, fontWeight: 600 }}>{hall.capacity}</div>
               </div>
             </div>
           </div>
         ))}
       </div>
+
+      {/* Hall Detail Sheet */}
+      {selectedHall && (
+        <div className="detail-sheet" style={{ background: bg, backgroundImage: darkTheme ? "url('https://www.transparenttextures.com/patterns/dark-matter.png')" : "url('https://www.transparenttextures.com/patterns/linen.png')" }}>
+          <button className="close-btn" onClick={() => setSelectedHall(null)}>✕</button>
+          
+          <img src={selectedHall.image} style={{ width: "100%", height: 300, objectFit: "cover" }} />
+          
+          <div style={{ padding: 24, position: "relative", marginTop: -30, background: bg, borderRadius: "30px 30px 0 0", borderTop: `1px solid ${border}` }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+              <div>
+                <h1 style={{ fontSize: 26, fontWeight: 900, margin: 0 }}>{selectedHall.name}</h1>
+                <div style={{ fontSize: 14, color: textSecondary, marginTop: 4 }}>{selectedHall.address}</div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: 24, fontWeight: 900, color: "#A87935" }}>{selectedHall.rating}</div>
+                <div style={{ fontSize: 11, color: textSecondary }}>{selectedHall.reviewsCount}</div>
+              </div>
+            </div>
+
+            <div style={{ height: 1, background: border, margin: "20px 0" }} />
+
+            <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>Описание</h3>
+            <p style={{ fontSize: 15, lineHeight: 1.6, color: textSecondary, margin: 0 }}>{selectedHall.description}</p>
+
+            <h3 style={{ fontSize: 18, fontWeight: 800, marginTop: 24, marginBottom: 12 }}>Особенности</h3>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {selectedHall.features.map(f => (
+                <span key={f} style={{ background: darkTheme ? "#222" : "#F1F3F4", padding: "6px 12px", borderRadius: 8, fontSize: 13, fontWeight: 600 }}>{f}</span>
+              ))}
+            </div>
+
+            <h3 style={{ fontSize: 18, fontWeight: 800, marginTop: 24, marginBottom: 8 }}>Кухня</h3>
+            <p style={{ fontSize: 15, color: textSecondary }}>{selectedHall.cuisine}</p>
+
+            <div style={{ height: 1, background: border, margin: "20px 0" }} />
+
+            <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 16 }}>Отзывы из 2ГИС</h3>
+            {selectedHall.reviews.map((r, i) => (
+              <div key={i} style={{ background: cardBg, padding: 16, borderRadius: 16, marginBottom: 12, border: `1px solid ${border}` }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                  <span style={{ fontWeight: 800 }}>{r.user}</span>
+                  <span style={{ fontSize: 12, color: "#A87935" }}>{"★".repeat(r.rating)}</span>
+                </div>
+                <p style={{ fontSize: 14, color: textSecondary, margin: 0, lineHeight: 1.5 }}>{r.text}</p>
+                <div style={{ fontSize: 11, color: "#888", marginTop: 8 }}>{r.date}</div>
+              </div>
+            ))}
+
+            <button
+              onClick={() => { setSelectedHall(null); router.push("/menu/booking"); }}
+              style={{ width: "100%", height: 60, marginTop: 20, background: "linear-gradient(135deg, #A87935, #800020)", color: "white", border: "none", borderRadius: 16, fontWeight: 800, fontSize: 16, boxShadow: "0 10px 20px rgba(128,0,32,0.3)" }}
+            >
+              Забронировать этот зал
+            </button>
+            <div style={{ height: 40 }} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

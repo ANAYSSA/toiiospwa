@@ -2,61 +2,41 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { auth, db } from "@/lib/firebase";
-import { signOut, onAuthStateChanged, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
+import { signOut, onAuthStateChanged } from "firebase/auth";
 import { ref, get, update } from "firebase/database";
 import { useToast } from "@/components/Toast";
 import { useLanguage } from "@/components/LanguageContext";
 
-const KZ_CITIES = [
-  "Алматы", "Астана", "Шымкент", "Актобе", "Караганда",
-  "Тараз", "Павлодар", "Усть-Каменогорск", "Семей", "Атырау",
-  "Костанай", "Кызылорда", "Уральск", "Петропавловск", "Актау", "Туркестан",
-];
-
 const T = {
   ru: {
     title: "Мой профиль",
-    active: "Активный",
-    removePhoto: "Удалить фото",
-    email: "Email",
-    phone: "Телефон",
-    city: "Город",
-    notSelected: "Не выбран",
-    editProfile: "✎ Редактировать профиль",
-    settings: "Настройки",
+    active: "Активный пользователь",
+    editProfile: "Редактировать",
+    settings: "НАСТРОЙКИ",
     darkTheme: "Тёмная тема",
-    changeCity: "Изменить город",
-    changePassword: "Сменить пароль",
     language: "Язык (RU / KZ)",
-    support: "Поддержка",
-    help: "Помощь",
+    support: "ПОДДЕРЖКА",
+    help: "Помощь и FAQ",
     about: "О приложении",
-    logout: "Выйти",
-    logoutConfirm: "Выйти из аккаунта?",
-    saved: "Сохранено",
-    error: "Ошибка",
+    logout: "Выйти из аккаунта",
+    myEvents: "МОИ МЕРОПРИЯТИЯ",
+    noEvents: "У вас пока нет активных бронирований",
+    stats: "СТАТИСТИКА"
   },
   kz: {
     title: "Менің профилім",
-    active: "Белсенді",
-    removePhoto: "Суретті жою",
-    email: "Email",
-    phone: "Телефон",
-    city: "Қала",
-    notSelected: "Таңдалмаған",
-    editProfile: "✎ Профильді өңдеу",
-    settings: "Параметрлер",
+    active: "Белсенді пайдаланушы",
+    editProfile: "Өңдеу",
+    settings: "ПАРАМЕТРЛЕР",
     darkTheme: "Қараңғы тақырып",
-    changeCity: "Қаланы өзгерту",
-    changePassword: "Құпия сөзді өзгерту",
     language: "Тіл (RU / KZ)",
-    support: "Қолдау",
-    help: "Көмек",
+    support: "ҚОЛДАУ",
+    help: "Көмек және FAQ",
     about: "Қосымша туралы",
-    logout: "Шығу",
-    logoutConfirm: "Аккаунттан шығасыз ба?",
-    saved: "Сақталды",
-    error: "Қате",
+    logout: "Аккаунттан шығу",
+    myEvents: "МЕНІҢ ІС-ШАРАЛАРЫМ",
+    noEvents: "Сізде әзірге белсенді брондаулар жоқ",
+    stats: "СТАТИСТИКА"
   }
 };
 
@@ -67,46 +47,21 @@ export default function ProfilePage() {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [city, setCity] = useState("");
-  const [showCityPicker, setShowCityPicker] = useState(false);
-  const [showEdit, setShowEdit] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showAboutApp, setShowAboutApp] = useState(false);
   const [darkTheme, setDarkTheme] = useState(false);
-  const [avatar, setAvatar] = useState(null);
-  const fileInputRef = useRef(null);
 
   const texts = T[lang] || T.ru;
 
   useEffect(() => {
     try {
       const saved = localStorage.getItem("theme");
-      if (saved === "dark") {
-        setDarkTheme(true);
-        document.documentElement.classList.add("dark");
-      }
-      const savedCity = localStorage.getItem("userCity");
-      if (savedCity) setCity(savedCity);
-      const savedAvatar = localStorage.getItem("userAvatar");
-      if (savedAvatar) setAvatar(savedAvatar);
+      if (saved === "dark") setDarkTheme(true);
     } catch (e) {}
 
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (u) {
         setUser(u);
-        try {
-          const snap = await get(ref(db, "Users/" + u.uid));
-          if (snap.exists()) {
-            const data = snap.val();
-            setProfile(data);
-            if (data.city && !city) {
-              setCity(data.city);
-              try { localStorage.setItem("userCity", data.city); } catch (e) {}
-            }
-          }
-        } catch (e) {
-          console.log("Could not fetch user profile:", e);
-        }
+        const snap = await get(ref(db, "Users/" + u.uid));
+        if (snap.exists()) setProfile(snap.val());
       }
       setLoading(false);
     });
@@ -117,91 +72,18 @@ export default function ProfilePage() {
     const newVal = !darkTheme;
     setDarkTheme(newVal);
     try {
-      if (newVal) {
-        document.documentElement.classList.add("dark");
-        localStorage.setItem("theme", "dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-        localStorage.setItem("theme", "light");
-      }
+      localStorage.setItem("theme", newVal ? "dark" : "light");
+      if (newVal) document.documentElement.classList.add("dark");
+      else document.documentElement.classList.remove("dark");
     } catch (e) {}
   };
-
-  const handleSelectCity = async (c) => {
-    setCity(c);
-    try { localStorage.setItem("userCity", c); } catch (e) {}
-    setShowCityPicker(false);
-    showToast(texts.saved + ": " + c);
-    if (user) {
-      try {
-        await update(ref(db, "Users/" + user.uid), { city: c });
-      } catch (e) {}
-    }
-  };
-
-  const handleAvatarChange = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const img = new Image();
-      img.onload = () => {
-        const size = 256;
-        const canvas = document.createElement("canvas");
-        canvas.width = size;
-        canvas.height = size;
-        const ctx = canvas.getContext("2d");
-        const minSide = Math.min(img.width, img.height);
-        const sx = (img.width - minSide) / 2;
-        const sy = (img.height - minSide) / 2;
-        ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
-        setAvatar(dataUrl);
-        try {
-          localStorage.setItem("userAvatar", dataUrl);
-          showToast(texts.saved);
-        } catch (err) {}
-      };
-      img.src = ev.target.result;
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleRemoveAvatar = () => {
-    setAvatar(null);
-    try { localStorage.removeItem("userAvatar"); } catch (e) {}
-    showToast(texts.saved);
-  };
-
-  const handleLogout = async () => {
-    if (!confirm(texts.logoutConfirm)) return;
-    try {
-      await signOut(auth);
-      router.replace("/");
-    } catch (err) {
-      showToast(texts.error + ": " + err.message);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
-        <span className="spinner" style={{ width: 30, height: 30, borderWidth: 3 }} />
-      </div>
-    );
-  }
-
-  const displayName = profile
-    ? `${profile.name || ""} ${profile.surname || ""}`.trim() || "User"
-    : "User";
-  const phoneStr = profile?.phoneNumber ? "+" + profile.phoneNumber : "—";
-  const emailStr = profile?.email || user?.email || "—";
-  const initials = ((profile?.name?.[0] || "") + (profile?.surname?.[0] || "")).toUpperCase() || "✦";
 
   const bg = darkTheme ? "#0A0A0A" : "#F8F9FA";
   const cardBg = darkTheme ? "#141414" : "white";
   const textColor = darkTheme ? "#FFFBEB" : "#1A1A1A";
-  const dividerColor = darkTheme ? "#222" : "rgba(0,0,0,0.06)";
+  const border = darkTheme ? "#222" : "#EEE";
+
+  if (loading) return <div style={{ height: "100vh", background: bg, display: "flex", alignItems: "center", justifyContent: "center" }}><span className="spinner" /></div>;
 
   return (
     <div style={{ 
@@ -209,104 +91,79 @@ export default function ProfilePage() {
       backgroundImage: darkTheme ? "url('https://www.transparenttextures.com/patterns/dark-matter.png')" : "url('https://www.transparenttextures.com/patterns/linen.png')",
       color: textColor, 
       minHeight: "100vh",
-      paddingBottom: "calc(120px + env(safe-area-inset-bottom))" 
+      paddingBottom: 100,
+      overflowY: "auto"
     }}>
-      <div className="profile-header">
-        <div style={{ position: "absolute", top: "calc(env(safe-area-inset-top) + 20px)", left: 0, right: 0, textAlign: "center", color: "white", fontSize: 20, fontWeight: 700 }}>
-          {texts.title}
+      <div style={{ background: "linear-gradient(135deg, #800020 0%, #A87935 100%)", height: 200, position: "relative", paddingTop: "env(safe-area-inset-top)" }}>
+        <div style={{ position: "absolute", bottom: -50, left: 20, display: "flex", alignItems: "flex-end", gap: 16 }}>
+           <div style={{ width: 100, height: 100, borderRadius: 50, border: "4px solid " + bg, background: "#A87935", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 40, fontWeight: 900, color: "white", boxShadow: "0 10px 20px rgba(0,0,0,0.2)" }}>
+             {profile?.name?.[0] || "U"}
+           </div>
+           <div style={{ paddingBottom: 10 }}>
+              <div style={{ fontSize: 22, fontWeight: 900, color: darkTheme ? "white" : "white" }}>{profile?.name} {profile?.surname}</div>
+              <div style={{ fontSize: 13, opacity: 0.8, color: "white" }}>{texts.active}</div>
+           </div>
         </div>
       </div>
 
-      <div style={{ margin: "0 20px", marginTop: -80, background: cardBg, borderRadius: 20, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", padding: 20, position: "relative", border: `1px solid ${dividerColor}` }}>
-        <div style={{ display: "flex", gap: 15, alignItems: "flex-start" }}>
-          <div style={{ position: "relative" }}>
-            <div
-              onClick={() => fileInputRef.current?.click()}
-              style={{ width: 90, height: 90, borderRadius: "50%", background: avatar ? "transparent" : "linear-gradient(135deg, #A87935, #800020)", border: "3px solid #FFD700", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 32, fontWeight: 700, overflow: "hidden", cursor: "pointer" }}
-            >
-              {avatar ? <img src={avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span>{initials}</span>}
-            </div>
-            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleAvatarChange} style={{ display: "none" }} />
-          </div>
-          <div style={{ flex: 1, paddingTop: 8 }}>
-            <div style={{ fontSize: 18, fontWeight: 700 }}>{displayName}</div>
-            <div style={{ color: "#4CAF50", fontSize: 12, marginTop: 4 }}>● {texts.active}</div>
-            {avatar && <button onClick={handleRemoveAvatar} style={{ marginTop: 6, background: "transparent", border: "none", color: "#F44336", fontSize: 11 }}>{texts.removePhoto}</button>}
-          </div>
+      <div style={{ marginTop: 70, padding: "0 20px" }}>
+        
+        <SectionTitle>{texts.stats}</SectionTitle>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+           <StatCard label="Баллы" value="450" dark={darkTheme} cardBg={cardBg} border={border} />
+           <StatCard label="Тои" value="2" dark={darkTheme} cardBg={cardBg} border={border} />
         </div>
-        <div style={{ height: 1, background: dividerColor, margin: "16px 0" }} />
-        <InfoRow icon="✉️" label={texts.email} value={emailStr} dark={darkTheme} />
-        <InfoRow icon="📞" label={texts.phone} value={phoneStr} dark={darkTheme} />
-        <InfoRow icon="📍" label={texts.city} value={city || texts.notSelected} dark={darkTheme} onClick={() => setShowCityPicker(true)} />
-        <button onClick={() => setShowEdit(true)} style={{ marginTop: 16, width: "100%", background: "rgba(168, 121, 53, 0.12)", color: "#A87935", border: "1px solid #A87935", borderRadius: 12, padding: "12px", fontWeight: 600, fontSize: 14 }}>{texts.editProfile}</button>
+
+        <SectionTitle>{texts.myEvents}</SectionTitle>
+        <div style={{ background: cardBg, borderRadius: 20, padding: 30, textAlign: "center", border: `1px solid ${border}`, color: "#888", fontSize: 14 }}>
+           <div style={{ fontSize: 40, marginBottom: 12 }}>📅</div>
+           {texts.noEvents}
+        </div>
+
+        <SectionTitle>{texts.settings}</SectionTitle>
+        <div style={{ background: cardBg, borderRadius: 20, border: `1px solid ${border}`, overflow: "hidden" }}>
+           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: `1px solid ${border}` }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}><span>🌙</span> {texts.darkTheme}</div>
+              <label className="switch">
+                <input type="checkbox" checked={darkTheme} onChange={toggleTheme} />
+                <span className="slider" />
+              </label>
+           </div>
+           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}><span>🌐</span> {texts.language}</div>
+              <div style={{ display: "flex", gap: 4 }}>
+                <button onClick={() => changeLang("ru")} style={{ padding: "6px 12px", borderRadius: 8, background: lang === "ru" ? "#A87935" : "transparent", color: lang === "ru" ? "white" : "#888", border: "none", fontWeight: 700 }}>RU</button>
+                <button onClick={() => changeLang("kz")} style={{ padding: "6px 12px", borderRadius: 8, background: lang === "kz" ? "#A87935" : "transparent", color: lang === "kz" ? "white" : "#888", border: "none", fontWeight: 700 }}>KZ</button>
+              </div>
+           </div>
+        </div>
+
+        <SectionTitle>{texts.support}</SectionTitle>
+        <div style={{ background: cardBg, borderRadius: 20, border: `1px solid ${border}`, overflow: "hidden" }}>
+           <div onClick={() => showToast("Раздел помощи")} style={{ padding: "16px 20px", borderBottom: `1px solid ${border}`, display: "flex", justifyContent: "space-between", cursor: "pointer" }}>
+              <span>❓ {texts.help}</span><span>›</span>
+           </div>
+           <div onClick={() => router.push("/menu/about")} style={{ padding: "16px 20px", borderBottom: `1px solid ${border}`, display: "flex", justifyContent: "space-between", cursor: "pointer" }}>
+              <span>ℹ️ {texts.about}</span><span>›</span>
+           </div>
+           <div onClick={() => { if(confirm("Выйти?")) signOut(auth).then(()=>router.replace("/")) }} style={{ padding: "16px 20px", color: "#F44336", display: "flex", justifyContent: "space-between", cursor: "pointer" }}>
+              <span>⏻ {texts.logout}</span>
+           </div>
+        </div>
       </div>
-
-      <SectionTitle>{texts.settings}</SectionTitle>
-      <SettingsBlock dark={darkTheme} cardBg={cardBg} divider={dividerColor}>
-        <div style={{ display: "flex", alignItems: "center", padding: "12px", height: 55 }}>
-          <span style={{ color: "#FFD700", fontSize: 20, marginRight: 12 }}>🌙</span>
-          <span style={{ flex: 1 }}>{texts.darkTheme}</span>
-          <label className="switch">
-            <input type="checkbox" checked={darkTheme} onChange={toggleTheme} />
-            <span className="slider" />
-          </label>
-        </div>
-        <DividerRow color={dividerColor} />
-        <div style={{ display: "flex", alignItems: "center", padding: "12px", height: 55 }}>
-          <span style={{ color: "#FFD700", fontSize: 20, marginRight: 12 }}>🌐</span>
-          <span style={{ flex: 1 }}>{texts.language}</span>
-          <div style={{ display: "flex", gap: 4 }}>
-            <button onClick={() => changeLang("ru")} style={{ padding: "4px 8px", borderRadius: 6, background: lang === "ru" ? "#A87935" : "transparent", color: lang === "ru" ? "white" : "#888", border: "none" }}>RU</button>
-            <button onClick={() => changeLang("kz")} style={{ padding: "4px 8px", borderRadius: 6, background: lang === "kz" ? "#A87935" : "transparent", color: lang === "kz" ? "white" : "#888", border: "none" }}>KZ</button>
-          </div>
-        </div>
-        <DividerRow color={dividerColor} />
-        <SettingsRow icon="🔒" label={texts.changePassword} onClick={() => setShowPassword(true)} />
-      </SettingsBlock>
-
-      <SectionTitle>{texts.support}</SectionTitle>
-      <SettingsBlock dark={darkTheme} cardBg={cardBg} divider={dividerColor}>
-        <SettingsRow icon="❓" label={texts.help} onClick={() => showToast(texts.help + "...")} />
-        <DividerRow color={dividerColor} />
-        <SettingsRow icon="ℹ️" label={texts.about} onClick={() => setShowAboutApp(true)} />
-        <DividerRow color={dividerColor} />
-        <SettingsRow icon="⏻" label={texts.logout} onClick={handleLogout} danger />
-      </SettingsBlock>
-    </div>
-  );
-}
-
-function InfoRow({ icon, label, value, dark, onClick }) {
-  return (
-    <div onClick={onClick} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", cursor: onClick ? "pointer" : "default" }}>
-      <span style={{ fontSize: 18, width: 28 }}>{icon}</span>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 11, color: dark ? "#888" : "#999" }}>{label}</div>
-        <div style={{ fontSize: 14, fontWeight: 500 }}>{value}</div>
-      </div>
-      {onClick && <span style={{ color: "#888" }}>›</span>}
     </div>
   );
 }
 
 function SectionTitle({ children }) {
-  return <div style={{ marginTop: 25, paddingLeft: 25, color: "#888", fontWeight: 700, fontSize: 12, textTransform: "uppercase" }}>{children}</div>;
+  return <div style={{ fontWeight: 900, fontSize: 11, color: "#A87935", letterSpacing: "0.1em", textTransform: "uppercase", margin: "32px 0 12px 4px" }}>{children}</div>;
 }
 
-function SettingsBlock({ children, dark, cardBg, divider }) {
-  return <div style={{ margin: "10px 20px 0", background: cardBg, borderRadius: 15, padding: 10, border: `1px solid ${divider}` }}>{children}</div>;
-}
-
-function SettingsRow({ icon, label, onClick, danger }) {
+function StatCard({ label, value, dark, cardBg, border }) {
   return (
-    <button onClick={onClick} style={{ display: "flex", alignItems: "center", width: "100%", background: "transparent", border: "none", padding: "0 12px", height: 55, color: danger ? "#F44336" : "inherit" }}>
-      <span style={{ color: danger ? "#F44336" : "#FFD700", fontSize: 20, marginRight: 12 }}>{icon}</span>
-      <span style={{ flex: 1, textAlign: "left" }}>{label}</span>
-      <span style={{ color: "#888" }}>›</span>
-    </button>
+    <div style={{ background: cardBg, borderRadius: 16, padding: 16, border: `1px solid ${border}`, textAlign: "center" }}>
+       <div style={{ fontSize: 24, fontWeight: 900, color: "#A87935" }}>{value}</div>
+       <div style={{ fontSize: 11, color: "#888", textTransform: "uppercase", marginTop: 4 }}>{label}</div>
+    </div>
   );
-}
-
-function DividerRow({ color }) {
-  return <div style={{ height: 1, background: color }} />;
 }
