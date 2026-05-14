@@ -1,6 +1,6 @@
 {
-  "name": "ТОЙХАНА — ToiKz",
-  "short_name": "ТОЙХАНА",
+  "name": "toi.kz — Бронирование тоев",
+  "short_name": "toi.kz",
   "description": "Бронирование залов и услуг для тоев в Казахстане",
   "start_url": "/",
   "display": "standalone",

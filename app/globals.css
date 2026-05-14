@@ -217,9 +217,9 @@ input, select, textarea {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 8px 4px;
-  color: rgba(255,255,255,0.6);
-  font-size: 11px;
+  padding: 6px 2px;
+  color: rgba(255,255,255,0.5);
+  font-size: 10px;
   cursor: pointer;
   transition: color 0.2s;
   background: transparent;
@@ -227,6 +227,7 @@ input, select, textarea {
   font-family: inherit;
   -webkit-appearance: none;
   appearance: none;
+  gap: 2px;
 }
 
 .nav-item.active {

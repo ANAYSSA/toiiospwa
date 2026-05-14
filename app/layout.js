@@ -1,13 +1,14 @@
+import { LanguageProvider } from "@/components/LanguageContext";
 import "./globals.css";
 
 export const metadata = {
-  title: "ТОЙХАНА — ToiKz",
+  title: "toi.kz — Бронирование тоев онлайн",
   description: "Бронирование залов и услуг для тоев в Казахстане",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "ТОЙХАНА",
+    title: "toi.kz",
   },
   icons: {
     icon: [
@@ -39,7 +40,7 @@ export default function RootLayout({ children }) {
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="ТОЙХАНА" />
+        <meta name="apple-mobile-web-app-title" content="toi.kz" />
         <meta name="format-detection" content="telephone=no" />
 
         {/* Apple touch icons — full set so iOS picks the sharpest one */}
@@ -56,7 +57,9 @@ export default function RootLayout({ children }) {
         <link rel="manifest" href="/manifest.json" />
       </head>
       <body>
-        {children}
+        <LanguageProvider>
+          {children}
+        </LanguageProvider>
         <script
           dangerouslySetInnerHTML={{
             __html: `
