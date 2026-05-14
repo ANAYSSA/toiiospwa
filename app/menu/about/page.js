@@ -91,20 +91,26 @@ export default function AboutPage() {
     }, 1200);
   };
 
-  const bg = darkTheme ? "#0F0F0F" : "#F8F9FA";
-  const cardBg = darkTheme ? "#1A1A1A" : "#FFFFFF";
+  const bg = darkTheme ? "#0A0A0A" : "#F8F9FA";
+  const cardBg = darkTheme ? "#141414" : "#FFFFFF";
   const textPrimary = darkTheme ? "#FFFBEB" : "#1A1A1A";
   const textSecondary = darkTheme ? "#999" : "#666";
   const border = darkTheme ? "#2A2A2A" : "#EEEEEE";
 
   return (
-    <div style={{ background: bg, color: textPrimary, minHeight: "100vh" }}>
+    <div style={{ 
+      background: bg, 
+      backgroundImage: darkTheme ? "url('https://www.transparenttextures.com/patterns/dark-matter.png')" : "url('https://www.transparenttextures.com/patterns/linen.png')",
+      color: textPrimary, 
+      minHeight: "100vh" 
+    }}>
       <div style={{
         background: "linear-gradient(135deg, #800020 0%, #A87935 100%)",
         paddingTop: "calc(20px + env(safe-area-inset-top))",
         paddingBottom: 40,
         paddingLeft: 20, paddingRight: 20,
         textAlign: "center", color: "#FFFBEB",
+        boxShadow: "0 4px 20px rgba(0,0,0,0.2)"
       }}>
         <div style={{ fontSize: 10, letterSpacing: "0.25em", opacity: 0.7, marginBottom: 8, fontWeight: 700 }}>TOI.KZ PLATFORM</div>
         <h1 style={{ fontSize: 32, fontWeight: 800, margin: 0, letterSpacing: "-0.02em" }}>{texts.hero}</h1>
@@ -115,7 +121,7 @@ export default function AboutPage() {
 
       <div style={{ padding: "0 16px 40px", marginTop: -20 }}>
         {/* Миссия */}
-        <div style={{ background: cardBg, borderRadius: 20, padding: 24, boxShadow: "0 10px 30px rgba(0,0,0,0.1)" }}>
+        <div style={{ background: cardBg, borderRadius: 20, padding: 24, boxShadow: "0 10px 30px rgba(0,0,0,0.1)", border: `1px solid ${border}` }}>
           <div style={{ color: "#A87935", fontWeight: 800, fontSize: 12, textTransform: "uppercase", marginBottom: 8 }}>{texts.missionLabel}</div>
           <p style={{ fontSize: 15, lineHeight: 1.7, color: textSecondary, margin: 0 }}>{texts.missionText}</p>
         </div>
@@ -124,7 +130,7 @@ export default function AboutPage() {
         <SectionLabel>{texts.statsLabel}</SectionLabel>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           {STATS.map((s) => (
-            <div key={s.label} style={{ background: cardBg, borderRadius: 16, padding: "20px 10px", textAlign: "center", border: `1px solid ${border}` }}>
+            <div key={s.label} style={{ background: cardBg, borderRadius: 16, padding: "20px 10px", textAlign: "center", border: `1px solid ${border}`, boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
               <div style={{ fontSize: 28, fontWeight: 900, background: "linear-gradient(135deg, #A87935, #800020)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>{s.value}</div>
               <div style={{ fontSize: 12, color: textSecondary, marginTop: 4, fontWeight: 500 }}>{s.label}</div>
             </div>
@@ -135,7 +141,7 @@ export default function AboutPage() {
         <SectionLabel>{texts.teamLabel}</SectionLabel>
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           {TEAM.map((m) => (
-            <div key={m.name} style={{ background: cardBg, borderRadius: 20, padding: 20, display: "flex", gap: 16, alignItems: "center", border: `1px solid ${border}` }}>
+            <div key={m.name} style={{ background: cardBg, borderRadius: 20, padding: 20, display: "flex", gap: 16, alignItems: "center", border: `1px solid ${border}`, boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
               <img src={m.photo} alt="" style={{ width: 80, height: 80, borderRadius: 40, border: "3px solid #A87935", objectFit: "cover" }} />
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 800, fontSize: 16 }}>{m.name}</div>
@@ -148,7 +154,7 @@ export default function AboutPage() {
 
         {/* Контакты */}
         <SectionLabel>{texts.contactLabel}</SectionLabel>
-        <div style={{ background: cardBg, borderRadius: 20, padding: 24, border: `1px solid ${border}` }}>
+        <div style={{ background: cardBg, borderRadius: 20, padding: 24, border: `1px solid ${border}`, boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
           <div style={{ marginBottom: 16 }}>
             <div style={{ fontSize: 11, color: "#999", marginBottom: 4 }}>ТЕЛЕФОН</div>
             <a href="tel:+77785600372" style={{ fontSize: 18, fontWeight: 700, color: textPrimary, textDecoration: "none" }}>+7 778 560 03 72</a>
@@ -161,17 +167,6 @@ export default function AboutPage() {
             <div style={{ fontSize: 11, color: "#999", marginBottom: 4 }}>ОФИС</div>
             <div style={{ fontSize: 15, fontWeight: 500 }}>Астана, пр. Мәңгілік Ел, 55/20</div>
           </div>
-        </div>
-
-        {/* Форма */}
-        <SectionLabel>Есть идеи?</SectionLabel>
-        <div style={{ background: cardBg, borderRadius: 20, padding: 24, border: `1px solid ${border}` }}>
-          <input placeholder={texts.formName} value={contactForm.name} onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })} style={inputStyle(darkTheme)} />
-          <div style={{ height: 12 }} />
-          <textarea placeholder={texts.formMsg} value={contactForm.message} onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })} rows={3} style={{ ...inputStyle(darkTheme), resize: "none" }} />
-          <button onClick={handleContactSubmit} disabled={sending} style={{ width: "100%", height: 52, marginTop: 16, background: "#A87935", color: "white", border: "none", borderRadius: 14, fontWeight: 700, fontSize: 15, cursor: "pointer", opacity: sending ? 0.7 : 1 }}>
-            {sending ? "Ждем..." : texts.formBtn}
-          </button>
         </div>
       </div>
     </div>

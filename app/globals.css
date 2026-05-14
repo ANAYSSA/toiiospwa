@@ -11,7 +11,7 @@
   --dark-bg: #0A0A0A;
   --wine: #800020;
 
-  /* Safe area variables — iOS notch/dynamic island/bottom bar support */
+  /* Safe area variables */
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
@@ -25,9 +25,7 @@
 }
 
 html {
-  /* Background extends behind safe areas so notch area is dark too */
   background: #0A0A0A;
-  /* Prevent iOS Safari from zooming on input focus */
   -webkit-text-size-adjust: 100%;
 }
 
@@ -42,7 +40,6 @@ body {
   background: #0A0A0A;
   color: #FFFBEB;
   min-height: 100vh;
-  /* Use dvh on iOS to avoid the bottom-bar jumping issue */
   min-height: 100dvh;
   overscroll-behavior-y: contain;
   -webkit-font-smoothing: antialiased;
@@ -54,162 +51,54 @@ body.light-theme {
   color: #1A1A1A;
 }
 
-/* PWA standalone mode tweaks */
-@media all and (display-mode: standalone) {
-  body {
-    user-select: none;
-  }
-  /* Disable pull-to-refresh on standalone */
-  html, body {
-    overscroll-behavior: none;
-  }
+/* Page transitions */
+main, .page-content {
+  animation: fadeIn 0.4s ease-out;
 }
 
-/* Prevent input zoom on iOS — font-size must be >= 16px */
-input, select, textarea {
-  font-size: 16px !important;
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-/* Top gold glow effect */
-.top-glow {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: calc(200px + var(--safe-top));
-  background: radial-gradient(ellipse at top, rgba(168, 121, 53, 0.25), transparent 70%);
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* Page wrapper that respects safe areas */
-.page-safe {
-  padding-top: var(--safe-top);
-  padding-left: var(--safe-left);
-  padding-right: var(--safe-right);
-  /* Bottom padding handled per-page */
-}
-
-/* Input style — gold border on dark bg */
+/* Input style */
 .input-gold {
-  background: rgba(168, 121, 53, 0.05);
-  border: 1px solid rgba(168, 121, 53, 0.4);
-  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(168, 121, 53, 0.3);
+  border-radius: 14px;
   color: #FFFBEB;
-  padding: 14px 18px;
+  padding: 16px 20px;
   width: 100%;
   outline: none;
   font-size: 16px;
-  transition: all 0.2s;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   -webkit-appearance: none;
   appearance: none;
-}
-
-.input-gold::placeholder {
-  color: rgba(255, 251, 235, 0.35);
 }
 
 .input-gold:focus {
-  border-color: #C9A96E;
+  border-color: #A87935;
   background: rgba(168, 121, 53, 0.08);
-  box-shadow: 0 0 0 3px rgba(168, 121, 53, 0.1);
+  box-shadow: 0 0 0 4px rgba(168, 121, 53, 0.15);
+  transform: translateY(-1px);
 }
 
-.btn-wine {
-  background: #800020;
-  color: #FFFBEB;
-  border-radius: 10px;
-  padding: 14px 28px;
-  font-weight: 500;
-  font-size: 16px;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s;
-  -webkit-appearance: none;
-  appearance: none;
-}
-
-.btn-wine:hover {
-  background: #6b001b;
-}
-
-.btn-wine:active {
-  transform: scale(0.98);
-}
-
-.btn-gold-outline {
-  background: rgba(168, 121, 53, 0.1);
-  color: #FFFBEB;
-  border: 1px solid #A87935;
-  border-radius: 10px;
-  padding: 14px 28px;
-  font-weight: 500;
-  font-size: 15px;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  -webkit-appearance: none;
-  appearance: none;
-}
-
-.btn-gold-outline:hover {
-  background: rgba(168, 121, 53, 0.2);
-}
-
-.brand-tag {
-  letter-spacing: 0.3em;
-  color: #A87935;
-  font-size: 11px;
-  font-weight: 500;
-}
-
-.welcome-title {
-  font-family: 'Playfair Display', serif;
-  font-size: 52px;
-  color: #FFFBEB;
-  font-weight: 500;
-  letter-spacing: -0.02em;
-  margin: 0;
-}
-
-.subtitle {
-  color: #7A5A28;
-  font-size: 14px;
-  text-align: center;
-  line-height: 1.5;
-  margin: 0;
-}
-
-/* Cards */
-.card-light {
-  background: #FFFFFF;
-  border-radius: 16px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-  overflow: hidden;
-}
-
-.dark .card-light {
-  background: #1F1F1F;
-}
-
-/* Bottom nav with safe-area for iPhone home indicator */
+/* Bottom nav */
 .bottom-nav {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  background: #121212;
+  background: rgba(15, 15, 15, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   display: flex;
   justify-content: space-around;
-  padding: 8px 0 0 0;
-  padding-bottom: calc(8px + env(safe-area-inset-bottom));
-  padding-left: env(safe-area-inset-left);
-  padding-right: env(safe-area-inset-right);
-  border-top: 1px solid rgba(168, 121, 53, 0.2);
+  padding: 10px 0;
+  padding-bottom: calc(10px + env(safe-area-inset-bottom));
+  border-top: 1px solid rgba(168, 121, 53, 0.15);
   z-index: 9999;
+  box-shadow: 0 -10px 30px rgba(0,0,0,0.3);
 }
 
 .nav-item {
@@ -217,120 +106,64 @@ input, select, textarea {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 6px 2px;
-  color: rgba(255,255,255,0.5);
+  gap: 4px;
+  color: rgba(255, 255, 255, 0.4);
   font-size: 10px;
-  cursor: pointer;
-  transition: color 0.2s;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   background: transparent;
   border: none;
-  font-family: inherit;
-  -webkit-appearance: none;
-  appearance: none;
-  gap: 2px;
 }
 
 .nav-item.active {
-  color: #C9A96E;
+  color: #A87935;
+  transform: translateY(-2px);
 }
 
 .nav-item svg {
-  margin-bottom: 4px;
+  transition: transform 0.3s ease;
 }
 
-/* Page that pushes content past the bottom nav */
-.with-bottom-nav {
-  padding-bottom: calc(80px + var(--safe-bottom));
+.nav-item.active svg {
+  transform: scale(1.1);
+  filter: drop-shadow(0 0 8px rgba(168, 121, 53, 0.4));
 }
 
-/* Booking light theme content */
-.booking-page {
-  background: #F8F9FA;
-  color: #1A1A1A;
-  min-height: 100vh;
-  min-height: 100dvh;
-  padding-bottom: calc(100px + var(--safe-bottom));
+/* Spinner */
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgba(168, 121, 53, 0.2);
+  border-top-color: #A87935;
+  border-radius: 50%;
+  animation: spin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
-.dark .booking-page {
-  background: #0F0F0F;
-  color: #FFFBEB;
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
-/* Toolbar at top of halls page — must respect safe-top */
-.page-toolbar {
-  background: #1A1A1A;
-  color: white;
-  padding-top: calc(16px + var(--safe-top));
-  padding-bottom: 16px;
-  padding-left: 20px;
-  padding-right: 20px;
-  display: flex;
-  align-items: center;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
-
-.section-card {
-  background: white;
-  border-radius: 16px;
-  padding: 16px;
-  margin-bottom: 16px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-}
-
-.dark .section-card {
-  background: #1A1A1A;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-}
-
-.field-input {
-  background: #F1F3F4;
-  border: none;
-  border-radius: 12px;
-  padding: 16px;
-  width: 100%;
-  font-size: 16px;
-  color: #1A1A1A;
-  outline: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.dark .field-input {
-  background: #2A2A2A;
-  color: #FFFBEB;
-}
-
-/* Modal overlay */
+/* Modal styles */
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.5);
-  z-index: 100;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(4px);
+  z-index: 10000;
   display: flex;
   align-items: flex-end;
   justify-content: center;
 }
 
 .modal-sheet {
-  background: white;
-  border-radius: 20px 20px 0 0;
   width: 100%;
   max-width: 500px;
-  max-height: 70vh;
-  overflow-y: auto;
-  padding: 20px;
-  padding-bottom: calc(20px + var(--safe-bottom));
-  animation: slideUp 0.25s ease-out;
-}
-
-.dark .modal-sheet {
-  background: #1A1A1A;
-  color: #FFFBEB;
+  border-radius: 30px 30px 0 0;
+  padding: 24px;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
+  animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @keyframes slideUp {
@@ -339,146 +172,21 @@ input, select, textarea {
 }
 
 .modal-item {
-  padding: 16px;
-  border-bottom: 1px solid #EEE;
+  padding: 18px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
   cursor: pointer;
+  transition: opacity 0.2s;
 }
 
-.dark .modal-item {
-  border-bottom-color: #333;
+.modal-item:active {
+  opacity: 0.6;
 }
 
-.modal-item:hover {
-  background: #F5F5F5;
-}
-
-.dark .modal-item:hover {
-  background: #2A2A2A;
-}
-
-/* Toast */
-.toast {
-  position: fixed;
-  bottom: calc(100px + var(--safe-bottom));
-  left: 50%;
-  transform: translateX(-50%);
-  background: #1A1A1A;
-  color: #FFFBEB;
-  padding: 12px 20px;
-  border-radius: 8px;
-  border: 1px solid #A87935;
-  z-index: 200;
-  font-size: 14px;
-  animation: fadeInUp 0.3s ease-out;
-  max-width: 90%;
-  text-align: center;
-}
-
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translate(-50%, 10px); }
-  to { opacity: 1; transform: translate(-50%, 0); }
-}
-
-/* Switch */
-.switch {
-  position: relative;
-  display: inline-block;
-  width: 50px;
-  height: 28px;
-  flex-shrink: 0;
-}
-
-.switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.slider {
+/* Top glow */
+.top-glow {
   position: absolute;
-  cursor: pointer;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background-color: #ccc;
-  transition: .3s;
-  border-radius: 28px;
-}
-
-.slider:before {
-  position: absolute;
-  content: "";
-  height: 22px;
-  width: 22px;
-  left: 3px;
-  bottom: 3px;
-  background-color: white;
-  transition: .3s;
-  border-radius: 50%;
-}
-
-input:checked + .slider {
-  background-color: #A87935;
-}
-
-input:checked + .slider:before {
-  transform: translateX(22px);
-}
-
-/* Checkboxes */
-.checkbox-row {
-  display: flex;
-  align-items: center;
-  padding: 12px 0;
-  cursor: pointer;
-  user-select: none;
-}
-
-.checkbox-row input {
-  margin-right: 12px;
-  width: 20px;
-  height: 20px;
-  accent-color: #1A73E8;
-  flex-shrink: 0;
-}
-
-.dark .checkbox-row input {
-  accent-color: #A87935;
-}
-
-/* Spinner Loading */
-.spinner {
-  width: 18px;
-  height: 18px;
-  border: 2px solid rgba(255,255,255,0.3);
-  border-top-color: #FFFBEB;
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
-  display: inline-block;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-/* Profile gradient header — covers the notch on iPhone */
-.profile-header {
-  background: linear-gradient(135deg, #A87935 0%, #800020 100%);
-  height: calc(180px + var(--safe-top));
-  padding-top: var(--safe-top);
-  position: relative;
-}
-
-/* Auth pages need top safe-area */
-.auth-page {
-  min-height: 100vh;
-  min-height: 100dvh;
-  background: #0A0A0A;
-  position: relative;
-  overflow-x: hidden;
-  padding-top: calc(52px + var(--safe-top));
-  padding-bottom: calc(32px + var(--safe-bottom));
-  padding-left: max(24px, var(--safe-left));
-  padding-right: max(24px, var(--safe-right));
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  top: 0; left: 0; right: 0;
+  height: 300px;
+  background: radial-gradient(circle at top, rgba(168, 121, 53, 0.15), transparent 70%);
+  pointer-events: none;
 }

@@ -198,20 +198,26 @@ export default function ProfilePage() {
   const emailStr = profile?.email || user?.email || "—";
   const initials = ((profile?.name?.[0] || "") + (profile?.surname?.[0] || "")).toUpperCase() || "✦";
 
-  const bg = darkTheme ? "#0F0F0F" : "#F8F9FA";
-  const cardBg = darkTheme ? "#1A1A1A" : "white";
+  const bg = darkTheme ? "#0A0A0A" : "#F8F9FA";
+  const cardBg = darkTheme ? "#141414" : "white";
   const textColor = darkTheme ? "#FFFBEB" : "#1A1A1A";
-  const dividerColor = darkTheme ? "#333" : "rgba(0,0,0,0.06)";
+  const dividerColor = darkTheme ? "#222" : "rgba(0,0,0,0.06)";
 
   return (
-    <div style={{ background: bg, color: textColor, paddingBottom: "calc(120px + env(safe-area-inset-bottom))" }}>
+    <div style={{ 
+      background: bg, 
+      backgroundImage: darkTheme ? "url('https://www.transparenttextures.com/patterns/dark-matter.png')" : "url('https://www.transparenttextures.com/patterns/linen.png')",
+      color: textColor, 
+      minHeight: "100vh",
+      paddingBottom: "calc(120px + env(safe-area-inset-bottom))" 
+    }}>
       <div className="profile-header">
         <div style={{ position: "absolute", top: "calc(env(safe-area-inset-top) + 20px)", left: 0, right: 0, textAlign: "center", color: "white", fontSize: 20, fontWeight: 700 }}>
           {texts.title}
         </div>
       </div>
 
-      <div style={{ margin: "0 20px", marginTop: -80, background: cardBg, borderRadius: 20, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", padding: 20, position: "relative" }}>
+      <div style={{ margin: "0 20px", marginTop: -80, background: cardBg, borderRadius: 20, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", padding: 20, position: "relative", border: `1px solid ${dividerColor}` }}>
         <div style={{ display: "flex", gap: 15, alignItems: "flex-start" }}>
           <div style={{ position: "relative" }}>
             <div
@@ -236,7 +242,7 @@ export default function ProfilePage() {
       </div>
 
       <SectionTitle>{texts.settings}</SectionTitle>
-      <SettingsBlock dark={darkTheme} cardBg={cardBg}>
+      <SettingsBlock dark={darkTheme} cardBg={cardBg} divider={dividerColor}>
         <div style={{ display: "flex", alignItems: "center", padding: "12px", height: 55 }}>
           <span style={{ color: "#FFD700", fontSize: 20, marginRight: 12 }}>🌙</span>
           <span style={{ flex: 1 }}>{texts.darkTheme}</span>
@@ -259,7 +265,7 @@ export default function ProfilePage() {
       </SettingsBlock>
 
       <SectionTitle>{texts.support}</SectionTitle>
-      <SettingsBlock dark={darkTheme} cardBg={cardBg}>
+      <SettingsBlock dark={darkTheme} cardBg={cardBg} divider={dividerColor}>
         <SettingsRow icon="❓" label={texts.help} onClick={() => showToast(texts.help + "...")} />
         <DividerRow color={dividerColor} />
         <SettingsRow icon="ℹ️" label={texts.about} onClick={() => setShowAboutApp(true)} />
@@ -287,8 +293,8 @@ function SectionTitle({ children }) {
   return <div style={{ marginTop: 25, paddingLeft: 25, color: "#888", fontWeight: 700, fontSize: 12, textTransform: "uppercase" }}>{children}</div>;
 }
 
-function SettingsBlock({ children, dark, cardBg }) {
-  return <div style={{ margin: "10px 20px 0", background: cardBg, borderRadius: 15, padding: 10 }}>{children}</div>;
+function SettingsBlock({ children, dark, cardBg, divider }) {
+  return <div style={{ margin: "10px 20px 0", background: cardBg, borderRadius: 15, padding: 10, border: `1px solid ${divider}` }}>{children}</div>;
 }
 
 function SettingsRow({ icon, label, onClick, danger }) {

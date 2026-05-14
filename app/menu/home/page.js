@@ -21,9 +21,6 @@ const T = {
     howItWorks: "ВСЁ ПРОСТО",
     features: "ПОЧЕМУ МЫ?",
     reviews: "ЧТО ГОВОРЯТ ЛЮДИ",
-    ctaTitle: "Готовы начать?",
-    ctaSub: "Оставьте заявку, и мы поможем подобрать лучшее место под ваш бюджет.",
-    ctaBtn: "Забронировать",
   },
   kz: {
     night: "Қайырлы түн",
@@ -39,28 +36,8 @@ const T = {
     howItWorks: "БӘРІ ОҢАЙ",
     features: "НЕГЕ БІЗ?",
     reviews: "АДАМДАР НЕ ДЕЙДІ",
-    ctaTitle: "Бастауға дайынсыз ба?",
-    ctaSub: "Өтінім қалдырыңыз, біз сіздің бюджетіңізге сәйкес келетін ең жақсы орынды табуға көмектесеміз.",
-    ctaBtn: "Брондау",
   }
 };
-
-const REVIEWS = [
-  {
-    name: "Айгерим Сейткали",
-    initials: "АС",
-    event: "Свадьба, Алматы",
-    text: "Нашли идеальный зал через toi.kz за 15 минут! Менеджер ресторана перезвонил сразу. Той прошёл на высшем уровне.",
-    color: "#800020",
-  },
-  {
-    name: "Бауыржан Нұрланов",
-    initials: "БН",
-    event: "Той, Астана",
-    text: "Очень удобный сервис. Сравнили несколько ресторанов, выбрали лучший по соотношению цены и качества. Рекомендую!",
-    color: "#A87935",
-  },
-];
 
 export default function HomePage() {
   const router = useRouter();
@@ -89,72 +66,78 @@ export default function HomePage() {
     return () => unsub();
   }, []);
 
-  const bg = darkTheme ? "#0F0F0F" : "#F8F9FA";
-  const cardBg = darkTheme ? "#1A1A1A" : "#FFFFFF";
+  const bg = darkTheme ? "#0A0A0A" : "#F8F9FA";
+  const cardBg = darkTheme ? "#141414" : "#FFFFFF";
   const textPrimary = darkTheme ? "#FFFBEB" : "#1A1A1A";
   const textSecondary = darkTheme ? "#888" : "#888";
+  const border = darkTheme ? "#222" : "#EEE";
 
   const greeting = getGreeting(texts);
 
   return (
-    <div style={{ background: bg, color: textPrimary, minHeight: "100vh" }}>
-      <div style={{ paddingTop: "calc(20px + env(safe-area-inset-top))", paddingLeft: 20, paddingRight: 20, paddingBottom: 20 }}>
+    <div style={{ 
+      background: bg, 
+      backgroundImage: darkTheme ? "url('https://www.transparenttextures.com/patterns/dark-matter.png')" : "url('https://www.transparenttextures.com/patterns/linen.png')",
+      color: textPrimary, 
+      minHeight: "100vh" 
+    }}>
+      <div style={{ paddingTop: "calc(20px + env(safe-area-inset-top))", paddingLeft: 20, paddingRight: 20, paddingBottom: 40 }}>
         
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 28 }}>
-          <img src="/icons/logo.png" alt="" style={{ width: 52, height: 52, borderRadius: 14 }} />
+          <div style={{ position: "relative" }}>
+             <img src="/icons/logo.png" alt="" style={{ width: 52, height: 52, borderRadius: 14, boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }} />
+             <div style={{ position: "absolute", bottom: -2, right: -2, width: 14, height: 14, background: "#4CAF50", borderRadius: 7, border: `2px solid ${bg}` }} />
+          </div>
           <div>
-            <div style={{ fontSize: 13, color: textSecondary }}>{greeting},</div>
+            <div style={{ fontSize: 13, color: textSecondary, fontWeight: 500 }}>{greeting},</div>
             <div style={{ fontSize: 20, fontWeight: 800 }}>{profile?.name || texts.welcome}</div>
           </div>
         </div>
 
         {/* Hero Card */}
-        <div style={{ background: "linear-gradient(135deg, #800020 0%, #A87935 100%)", borderRadius: 24, color: "#FFFBEB", padding: 28, boxShadow: "0 12px 30px rgba(128,0,32,0.3)" }}>
-          <h2 style={{ fontSize: 24, fontWeight: 800, lineHeight: 1.2, margin: 0 }}>{texts.heroTitle}</h2>
-          <p style={{ fontSize: 14, opacity: 0.9, marginTop: 12, lineHeight: 1.5 }}>{texts.heroSub}</p>
-          <button onClick={() => router.push("/menu/booking")} style={{ marginTop: 20, background: "#FFFBEB", color: "#800020", border: "none", borderRadius: 12, padding: "14px 24px", fontWeight: 800, fontSize: 14 }}>{texts.startSearch}</button>
+        <div style={{ 
+          background: "linear-gradient(135deg, #800020 0%, #A87935 100%)", 
+          borderRadius: 24, color: "#FFFBEB", padding: 32, 
+          boxShadow: "0 15px 35px rgba(128,0,32,0.3)",
+          position: "relative", overflow: "hidden"
+        }}>
+          <div style={{ position: "absolute", top: -20, right: -20, width: 150, height: 150, background: "rgba(255,255,255,0.05)", borderRadius: 75 }} />
+          <h2 style={{ fontSize: 26, fontWeight: 900, lineHeight: 1.1, margin: 0 }}>{texts.heroTitle}</h2>
+          <p style={{ fontSize: 15, opacity: 0.9, marginTop: 14, lineHeight: 1.5, maxWidth: "80%" }}>{texts.heroSub}</p>
+          <button onClick={() => router.push("/menu/booking")} style={{ marginTop: 24, background: "#FFFBEB", color: "#800020", border: "none", borderRadius: 14, padding: "16px 28px", fontWeight: 900, fontSize: 15, boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}>{texts.startSearch}</button>
         </div>
 
         <SectionTitle>{texts.quickActions}</SectionTitle>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <ActionBox icon="🏛️" label="Залы" onClick={() => router.push("/menu/halls")} dark={darkTheme} cardBg={cardBg} />
-          <ActionBox icon="📝" label="Бронь" onClick={() => router.push("/menu/booking")} dark={darkTheme} cardBg={cardBg} />
-          <ActionBox icon="🎤" label="Тамада" onClick={() => router.push("/menu/booking")} dark={darkTheme} cardBg={cardBg} />
-          <ActionBox icon="📸" label="Фото" onClick={() => router.push("/menu/booking")} dark={darkTheme} cardBg={cardBg} />
+          <ActionBox icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4M9 9v.01M9 12v.01M9 15v.01M9 18v.01"/></svg>} label="Залы" onClick={() => router.push("/menu/halls")} dark={darkTheme} cardBg={cardBg} />
+          <ActionBox icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>} label="Бронь" onClick={() => router.push("/menu/booking")} dark={darkTheme} cardBg={cardBg} />
+          <ActionBox icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.5 1.5M2 2L3.5 9.5"/></svg>} label="Тамада" onClick={() => router.push("/menu/booking")} dark={darkTheme} cardBg={cardBg} />
+          <ActionBox icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>} label="Фото" onClick={() => router.push("/menu/booking")} dark={darkTheme} cardBg={cardBg} />
         </div>
 
         <SectionTitle>{texts.events}</SectionTitle>
         <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 10 }}>
           {["Той", "Свадьба", "Ұзату", "Беташар", "Сүндет той"].map(ev => (
-            <button key={ev} onClick={() => router.push("/menu/booking")} style={{ background: cardBg, border: `1px solid ${darkTheme ? "#333" : "#EEE"}`, borderRadius: 12, padding: "10px 18px", fontSize: 14, fontWeight: 600, color: textPrimary, whiteSpace: "nowrap" }}>{ev}</button>
+            <button key={ev} onClick={() => router.push("/menu/booking")} style={{ background: cardBg, border: `1px solid ${border}`, borderRadius: 14, padding: "12px 20px", fontSize: 14, fontWeight: 700, color: textPrimary, whiteSpace: "nowrap", boxShadow: "0 2px 6px rgba(0,0,0,0.05)" }}>{ev}</button>
           ))}
         </div>
 
-        <SectionTitle>{texts.howItWorks}</SectionTitle>
-        <div style={{ background: cardBg, borderRadius: 24, padding: 24, border: `1px solid ${darkTheme ? "#333" : "#EEE"}` }}>
-          <Step n="1" t="Выбираете зал" d="Смотрите фото, цены и отзывы в вашем городе." />
-          <Step n="2" t="Добавляете услуги" d="Нужен тамада или торт? Просто отметьте галочкой." />
-          <Step n="3" t="Получаете оффер" d="Ресторан свяжется с вами, чтобы подтвердить дату." last />
+        {/* Feature list */}
+        <SectionTitle>{texts.features}</SectionTitle>
+        <div style={{ background: cardBg, borderRadius: 24, padding: 8, border: `1px solid ${border}` }}>
+          <FeatureItem icon="✅" title="Проверенные залы" desc="Все рестораны проходят нашу личную проверку." dark={darkTheme} />
+          <FeatureItem icon="💰" title="Лучшие цены" desc="Прямые цены от заведений без наценок." dark={darkTheme} />
+          <FeatureItem icon="📱" title="Всё в одном" desc="Бронируйте зал, тамаду и декор в одном месте." dark={darkTheme} last />
         </div>
 
-        <SectionTitle>{texts.reviews}</SectionTitle>
-        {REVIEWS.map(r => (
-          <div key={r.name} style={{ background: cardBg, borderRadius: 20, padding: 20, marginBottom: 12, border: `1px solid ${darkTheme ? "#333" : "#EEE"}` }}>
-            <div style={{ color: "#FFD700", marginBottom: 8 }}>★★★★★</div>
-            <p style={{ fontSize: 14, color: textSecondary, margin: 0, lineHeight: 1.6 }}>&ldquo;{r.text}&rdquo;</p>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12 }}>
-              <div style={{ width: 32, height: 32, borderRadius: 16, background: r.color, color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800 }}>{r.initials}</div>
-              <div style={{ fontSize: 13, fontWeight: 700 }}>{r.name} · <span style={{ fontWeight: 400, opacity: 0.7 }}>{r.event}</span></div>
-            </div>
-          </div>
-        ))}
-
         {/* CTA */}
-        <div style={{ marginTop: 24, background: "linear-gradient(135deg, #A87935 0%, #800020 100%)", borderRadius: 24, padding: 32, textAlign: "center", color: "white" }}>
-          <h3 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>{texts.ctaTitle}</h3>
-          <p style={{ fontSize: 14, opacity: 0.8, marginTop: 10 }}>{texts.ctaSub}</p>
-          <button onClick={() => router.push("/menu/booking")} style={{ marginTop: 20, background: "white", color: "#800020", border: "none", borderRadius: 12, padding: "14px 32px", fontWeight: 800, fontSize: 15 }}>{texts.ctaBtn}</button>
+        <div style={{ marginTop: 32, position: "relative", height: 180, borderRadius: 24, overflow: "hidden", boxShadow: "0 15px 35px rgba(0,0,0,0.2)" }}>
+           <img src="https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=800" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.8), transparent)", display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: 24 }}>
+              <div style={{ color: "white", fontWeight: 800, fontSize: 18 }}>Нужна помощь в выборе?</div>
+              <div style={{ color: "rgba(255,255,255,0.8)", fontSize: 13, marginTop: 4 }}>Наши менеджеры подберут зал под ваш бюджет бесплатно.</div>
+           </div>
         </div>
       </div>
     </div>
@@ -162,26 +145,26 @@ export default function HomePage() {
 }
 
 function SectionTitle({ children }) {
-  return <div style={{ fontWeight: 900, fontSize: 11, color: "#A87935", letterSpacing: "0.1em", textTransform: "uppercase", margin: "32px 0 16px 4px" }}>{children}</div>;
+  return <div style={{ fontWeight: 900, fontSize: 11, color: "#A87935", letterSpacing: "0.12em", textTransform: "uppercase", margin: "36px 0 16px 4px" }}>{children}</div>;
 }
 
 function ActionBox({ icon, label, onClick, dark, cardBg }) {
   return (
-    <button onClick={onClick} style={{ background: cardBg, border: `1px solid ${dark ? "#333" : "#EEE"}`, borderRadius: 18, padding: 18, textAlign: "left", display: "flex", flexDirection: "column", gap: 8, cursor: "pointer" }}>
-      <div style={{ fontSize: 24 }}>{icon}</div>
-      <div style={{ fontWeight: 800, fontSize: 15, color: "inherit" }}>{label}</div>
+    <button onClick={onClick} style={{ background: cardBg, border: `1px solid ${dark ? "#222" : "#EEE"}`, borderRadius: 20, padding: 20, textAlign: "left", display: "flex", flexDirection: "column", gap: 10, cursor: "pointer", color: "inherit", transition: "transform 0.2s" }}>
+      <div style={{ color: "#A87935" }}>{icon}</div>
+      <div style={{ fontWeight: 800, fontSize: 15 }}>{label}</div>
     </button>
   );
 }
 
-function Step({ n, t, d, last }) {
+function FeatureItem({ icon, title, desc, dark, last }) {
   return (
-    <div style={{ marginBottom: last ? 0 : 20, display: "flex", gap: 16 }}>
-      <div style={{ width: 28, height: 28, borderRadius: 14, background: "#A87935", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, flexShrink: 0 }}>{n}</div>
-      <div>
-        <div style={{ fontWeight: 700, fontSize: 15 }}>{t}</div>
-        <div style={{ fontSize: 13, color: "#888", marginTop: 4 }}>{d}</div>
-      </div>
+    <div style={{ padding: "16px 20px", borderBottom: last ? "none" : `1px solid ${dark ? "#222" : "#EEE"}`, display: "flex", gap: 16 }}>
+       <div style={{ fontSize: 22 }}>{icon}</div>
+       <div>
+          <div style={{ fontWeight: 700, fontSize: 15 }}>{title}</div>
+          <div style={{ fontSize: 13, color: "#888", marginTop: 2 }}>{desc}</div>
+       </div>
     </div>
   );
 }
