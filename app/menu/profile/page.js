@@ -7,45 +7,6 @@ import { ref, get, update } from "firebase/database";
 import { useToast } from "@/components/Toast";
 import { useLanguage } from "@/components/LanguageContext";
 
-const T = {
-  ru: {
-    title: "Мой профиль",
-    active: "Активный пользователь",
-    editProfile: "Редактировать",
-    save: "Сохранить",
-    cancel: "Отмена",
-    settings: "НАСТРОЙКИ",
-    darkTheme: "Тёмная тема",
-    language: "Язык (RU / KZ)",
-    support: "ПОДДЕРЖКА",
-    help: "Помощь и FAQ",
-    about: "О приложении",
-    logout: "Выйти из аккаунта",
-    myEvents: "МОИ МЕРОПРИЯТИЯ",
-    noEvents: "У вас пока нет активных бронирований",
-    stats: "СТАТИСТИКА",
-    saved: "Сохранено"
-  },
-  kz: {
-    title: "Менің профилім",
-    active: "Белсенді пайдаланушы",
-    editProfile: "Өңдеу",
-    save: "Сақтау",
-    cancel: "Болдырмау",
-    settings: "ПАРАМЕТРЛЕР",
-    darkTheme: "Қараңғы тақырып",
-    language: "Тіл (RU / KZ)",
-    support: "ҚОЛДАУ",
-    help: "Көмек және FAQ",
-    about: "Қосымша туралы",
-    logout: "Аккаунттан шығу",
-    myEvents: "МЕНІҢ ІС-ШАРАЛАРЫМ",
-    noEvents: "Сізде әзірге белсенді брондаулар жоқ",
-    stats: "СТАТИСТИКА",
-    saved: "Сақталды"
-  }
-};
-
 export default function ProfilePage() {
   const router = useRouter();
   const showToast = useToast();
@@ -53,20 +14,17 @@ export default function ProfilePage() {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [darkTheme, setDarkTheme] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState({ name: "", surname: "" });
-  const [userStats, setUserStats] = useState({ points: 0, events: 0 });
+  const [editForm, setEditForm] = useState({ name: "", surname: "", email: "" });
+  const [userStats, setUserStats] = useState({ points: 100, events: 0 });
   const fileInputRef = useRef(null);
 
-  const texts = T[lang] || T.ru;
+  const texts = {
+    ru: { role: "Активный пользователь", edit: "Редактировать", save: "Сохранить", cancel: "Отмена", fav: "Избранные", payment: "Оплата", invite: "Пригласить друга", promo: "Акции", settings: "Настройки", logout: "Выйти" },
+    kz: { role: "Белсенді пайдаланушы", edit: "Өңдеу", save: "Сақтау", cancel: "Болдырмау", fav: "Таңдаулы", payment: "Төлем", invite: "Досты шақыру", promo: "Акциялар", settings: "Баптаулар", logout: "Шығу" }
+  }[lang] || texts.ru;
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("theme");
-      if (saved === "dark") setDarkTheme(true);
-    } catch (e) {}
-
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (u) {
         setUser(u);
@@ -74,32 +32,20 @@ export default function ProfilePage() {
         if (snap.exists()) {
           const data = snap.val();
           setProfile(data);
-          setEditForm({ name: data.name || "", surname: data.surname || "" });
-          // Fetch real stats (mocking points logic based on events)
+          setEditForm({ name: data.name || "", surname: data.surname || "", email: data.email || "" });
+          
           const bookingsSnap = await get(ref(db, "Bookings"));
           let userEvents = 0;
           if (bookingsSnap.exists()) {
-            bookingsSnap.forEach(child => {
-              if (child.val().userId === u.uid) userEvents++;
-            });
+            bookingsSnap.forEach(child => { if (child.val().userId === u.uid) userEvents++; });
           }
-          setUserStats({ events: userEvents, points: userEvents * 150 + 100 }); // Base 100 points
+          setUserStats({ events: userEvents, points: userEvents * 150 + 100 });
         }
       }
       setLoading(false);
     });
     return () => unsub();
   }, []);
-
-  const toggleTheme = () => {
-    const newVal = !darkTheme;
-    setDarkTheme(newVal);
-    try {
-      localStorage.setItem("theme", newVal ? "dark" : "light");
-      if (newVal) document.documentElement.classList.add("dark");
-      else document.documentElement.classList.remove("dark");
-    } catch (e) {}
-  };
 
   const handleAvatarChange = (e) => {
     const file = e.target.files?.[0];
@@ -118,147 +64,133 @@ export default function ProfilePage() {
         const sy = (img.height - minSide) / 2;
         ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
         const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
-        
-        // Save to state and DB
         setProfile({ ...profile, avatar: dataUrl });
-        if (user) {
-          try {
-            await update(ref(db, "Users/" + user.uid), { avatar: dataUrl });
-            showToast(texts.saved);
-          } catch(err) { console.error(err); }
-        }
+        if (user) await update(ref(db, "Users/" + user.uid), { avatar: dataUrl });
       };
       img.src = ev.target.result;
     };
     reader.readAsDataURL(file);
   };
 
-  const handleSaveProfile = async () => {
+  const handleSaveProfile = async (e) => {
+    e.preventDefault();
     if (user) {
-      try {
-        await update(ref(db, "Users/" + user.uid), { name: editForm.name, surname: editForm.surname });
-        setProfile({ ...profile, name: editForm.name, surname: editForm.surname });
-        setIsEditing(false);
-        showToast(texts.saved);
-      } catch(err) { console.error(err); }
+      await update(ref(db, "Users/" + user.uid), { name: editForm.name, surname: editForm.surname, email: editForm.email });
+      setProfile({ ...profile, name: editForm.name, surname: editForm.surname, email: editForm.email });
+      setIsEditing(false);
+      showToast("Сохранено");
     }
   };
 
-  const bg = darkTheme ? "#0A0A0A" : "#F8F9FA";
-  const cardBg = darkTheme ? "#141414" : "white";
-  const textColor = darkTheme ? "#FFFBEB" : "#1A1A1A";
-  const border = darkTheme ? "#222" : "#EEE";
-
-  if (loading) return <div style={{ height: "100vh", background: bg, display: "flex", alignItems: "center", justifyContent: "center" }}><span className="spinner" /></div>;
+  if (loading) return <div style={{ height: "100vh", background: "#FFF", display: "flex", alignItems: "center", justifyContent: "center" }}><span className="spinner" /></div>;
 
   return (
-    <div style={{ 
-      background: bg, 
-      backgroundImage: darkTheme ? "url('https://www.transparenttextures.com/patterns/dark-matter.png')" : "url('https://www.transparenttextures.com/patterns/linen.png')",
-      color: textColor, 
-      minHeight: "100vh",
-      paddingBottom: 100,
-      overflowY: "auto"
-    }}>
-      <div style={{ background: "linear-gradient(135deg, #800020 0%, #A87935 100%)", height: 200, position: "relative", paddingTop: "env(safe-area-inset-top)" }}>
-        <div style={{ position: "absolute", bottom: -50, left: 20, display: "flex", alignItems: "flex-end", gap: 16 }}>
-           <div 
-             onClick={() => fileInputRef.current?.click()}
-             style={{ width: 100, height: 100, borderRadius: 50, border: "4px solid " + bg, background: "#A87935", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 40, fontWeight: 900, color: "white", boxShadow: "0 10px 20px rgba(0,0,0,0.2)", overflow: "hidden", cursor: "pointer" }}
-           >
-             {profile?.avatar ? <img src={profile.avatar} alt="avatar" style={{width: "100%", height: "100%", objectFit: "cover"}} /> : (profile?.name?.[0] || "U")}
-           </div>
-           <input ref={fileInputRef} type="file" accept="image/*" onChange={handleAvatarChange} style={{ display: "none" }} />
-           
-           <div style={{ paddingBottom: 10 }}>
-              {isEditing ? (
-                <div style={{ display: "flex", gap: 8, flexDirection: "column" }}>
-                  <input value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} style={{ padding: "4px 8px", borderRadius: 8, border: "1px solid #A87935", background: darkTheme?"#222":"#FFF", color: textColor, width: 140 }} placeholder="Имя" />
-                  <input value={editForm.surname} onChange={e => setEditForm({...editForm, surname: e.target.value})} style={{ padding: "4px 8px", borderRadius: 8, border: "1px solid #A87935", background: darkTheme?"#222":"#FFF", color: textColor, width: 140 }} placeholder="Фамилия" />
-                </div>
-              ) : (
-                <>
-                  <div style={{ fontSize: 22, fontWeight: 900, color: textColor }}>{profile?.name || "Пользователь"} {profile?.surname}</div>
-                  <div style={{ fontSize: 13, color: darkTheme ? "rgba(255,255,255,0.7)" : "rgba(0,0,0,0.6)", fontWeight: 500 }}>{texts.active}</div>
-                </>
-              )}
-           </div>
-        </div>
-        
-        <div style={{ position: "absolute", bottom: -40, right: 20 }}>
+    <div style={{ background: "#FFFFFF", color: "#1A1A1A", minHeight: "100vh", paddingBottom: 100, fontFamily: "sans-serif" }}>
+      
+      {/* Top Bar */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "calc(16px + env(safe-area-inset-top)) 24px 16px" }}>
+        <button onClick={() => router.push("/menu/home")} style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2D3748" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        </button>
+        <button onClick={() => isEditing ? handleSaveProfile(new Event('submit')) : setIsEditing(true)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}>
           {isEditing ? (
-            <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => setIsEditing(false)} style={{ background: "transparent", color: textSecondary(darkTheme), border: "none", fontWeight: 600 }}>{texts.cancel}</button>
-              <button onClick={handleSaveProfile} style={{ background: "#A87935", color: "white", border: "none", padding: "6px 12px", borderRadius: 8, fontWeight: 700 }}>{texts.save}</button>
-            </div>
+            <span style={{color: "#3182CE", fontWeight: 600}}>Save</span>
           ) : (
-            <button onClick={() => setIsEditing(true)} style={{ background: "transparent", color: "#A87935", border: "1px solid #A87935", padding: "6px 12px", borderRadius: 8, fontWeight: 700 }}>{texts.editProfile}</button>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D3748" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
           )}
-        </div>
+        </button>
       </div>
 
-      <div style={{ marginTop: 70, padding: "0 20px" }}>
-        
-        <SectionTitle>{texts.stats}</SectionTitle>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-           <StatCard label="Баллы" value={userStats.points} dark={darkTheme} cardBg={cardBg} border={border} />
-           <StatCard label="Тои" value={userStats.events} dark={darkTheme} cardBg={cardBg} border={border} />
-        </div>
-
-        <SectionTitle>{texts.myEvents}</SectionTitle>
-        <div style={{ background: cardBg, borderRadius: 20, padding: 30, textAlign: "center", border: `1px solid ${border}`, color: textSecondary(darkTheme), fontSize: 14 }}>
-           <div style={{ fontSize: 40, marginBottom: 12 }}>📅</div>
-           {texts.noEvents}
-        </div>
-
-        <SectionTitle>{texts.settings}</SectionTitle>
-        <div style={{ background: cardBg, borderRadius: 20, border: `1px solid ${border}`, overflow: "hidden" }}>
-           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: `1px solid ${border}` }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}><span>🌙</span> {texts.darkTheme}</div>
-              <label className="switch">
-                <input type="checkbox" checked={darkTheme} onChange={toggleTheme} />
-                <span className="slider" />
-              </label>
-           </div>
-           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}><span>🌐</span> {texts.language}</div>
-              <div style={{ display: "flex", gap: 4 }}>
-                <button onClick={() => changeLang("ru")} style={{ padding: "6px 12px", borderRadius: 8, background: lang === "ru" ? "#A87935" : "transparent", color: lang === "ru" ? "white" : textSecondary(darkTheme), border: "none", fontWeight: 700 }}>RU</button>
-                <button onClick={() => changeLang("kz")} style={{ padding: "6px 12px", borderRadius: 8, background: lang === "kz" ? "#A87935" : "transparent", color: lang === "kz" ? "white" : textSecondary(darkTheme), border: "none", fontWeight: 700 }}>KZ</button>
+      <div style={{ padding: "0 24px" }}>
+        {/* Profile Info Row */}
+        <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 24 }}>
+          <div onClick={() => fileInputRef.current?.click()} style={{ width: 80, height: 80, borderRadius: 40, background: "#E2E8F0", overflow: "hidden", cursor: "pointer", flexShrink: 0, position: "relative" }}>
+            {profile?.avatar ? <img src={profile.avatar} style={{width: "100%", height: "100%", objectFit: "cover"}} /> : <div style={{width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:32, color:"#A0AEC0", fontWeight:"bold"}}>{profile?.name?.[0] || "U"}</div>}
+            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "rgba(0,0,0,0.5)", height: 24, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            </div>
+          </div>
+          <input ref={fileInputRef} type="file" accept="image/*" onChange={handleAvatarChange} style={{ display: "none" }} />
+          
+          <div style={{ flex: 1 }}>
+            {isEditing ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <input value={editForm.name} onChange={e=>setEditForm({...editForm, name: e.target.value})} style={editInputStyle} placeholder="Имя" />
+                <input value={editForm.surname} onChange={e=>setEditForm({...editForm, surname: e.target.value})} style={editInputStyle} placeholder="Фамилия" />
               </div>
-           </div>
+            ) : (
+              <>
+                <div style={{ fontSize: 22, fontWeight: 700, color: "#2D3748" }}>{profile?.name} {profile?.surname}</div>
+                <div style={{ fontSize: 13, color: "#718096", marginTop: 4 }}>{texts.role}</div>
+              </>
+            )}
+          </div>
         </div>
 
-        <SectionTitle>{texts.support}</SectionTitle>
-        <div style={{ background: cardBg, borderRadius: 20, border: `1px solid ${border}`, overflow: "hidden" }}>
-           <div onClick={() => showToast("Раздел помощи")} style={{ padding: "16px 20px", borderBottom: `1px solid ${border}`, display: "flex", justifyContent: "space-between", cursor: "pointer" }}>
-              <span>❓ {texts.help}</span><span>›</span>
-           </div>
-           <div onClick={() => router.push("/menu/about")} style={{ padding: "16px 20px", borderBottom: `1px solid ${border}`, display: "flex", justifyContent: "space-between", cursor: "pointer" }}>
-              <span>ℹ️ {texts.about}</span><span>›</span>
-           </div>
-           <div onClick={() => { if(confirm("Выйти?")) signOut(auth).then(()=>router.replace("/")) }} style={{ padding: "16px 20px", color: "#F44336", display: "flex", justifyContent: "space-between", cursor: "pointer" }}>
-              <span>⏻ {texts.logout}</span>
-           </div>
+        {/* Contact Info */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 32 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A0AEC0" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+            <span style={{ fontSize: 14, color: "#718096" }}>{user?.phoneNumber || "+7 (---) --- -- --"}</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A0AEC0" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            {isEditing ? (
+              <input value={editForm.email} onChange={e=>setEditForm({...editForm, email: e.target.value})} style={{...editInputStyle, flex: 1}} placeholder="Email" />
+            ) : (
+              <span style={{ fontSize: 14, color: "#718096" }}>{profile?.email || "email не указан"}</span>
+            )}
+          </div>
         </div>
+
+        {/* Stats Card */}
+        <div style={{ display: "flex", background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: 12, padding: "20px 0", boxShadow: "0 4px 6px rgba(0,0,0,0.02)", marginBottom: 32 }}>
+          <div style={{ flex: 1, textAlign: "center", borderRight: "1px solid #E2E8F0" }}>
+            <div style={{ fontSize: 20, fontWeight: 800, color: "#2B6CB0", marginBottom: 4 }}>{userStats.points}</div>
+            <div style={{ fontSize: 12, color: "#A0AEC0", fontWeight: 500 }}>Баллы</div>
+          </div>
+          <div style={{ flex: 1, textAlign: "center" }}>
+            <div style={{ fontSize: 20, fontWeight: 800, color: "#2D3748", marginBottom: 4 }}>{userStats.events}</div>
+            <div style={{ fontSize: 12, color: "#A0AEC0", fontWeight: 500 }}>Тои</div>
+          </div>
+        </div>
+
+        {/* Menu Items */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <MenuItem icon={<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>} text={texts.fav} />
+          <MenuItem icon={<rect x="2" y="5" width="20" height="14" rx="2" ry="2"/><line x1="2" y1="10" x2="22" y2="10"/>} text={texts.payment} />
+          <div onClick={() => changeLang(lang === "ru" ? "kz" : "ru")} style={{ background: "#F7FAFC", borderRadius: 12, padding: "16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 16 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4299E1" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            <span style={{ fontSize: 15, fontWeight: 600, color: "#2D3748", flex: 1 }}>Язык / Тіл</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "#3182CE", background: "#EBF8FF", padding: "4px 8px", borderRadius: 6 }}>{lang.toUpperCase()}</span>
+          </div>
+          <MenuItem icon={<path d="M21.21 15.89A10 10 0 1 1 8 2.83M22 12A10 10 0 0 0 12 2v10z"/>} text={texts.settings} />
+        </div>
+
+        {/* Logout */}
+        <div style={{ marginTop: 40, borderTop: "1px solid #E2E8F0", paddingTop: 24 }}>
+          <div onClick={() => signOut(auth).then(()=>router.replace("/"))} style={{ display: "flex", alignItems: "center", gap: 16, cursor: "pointer" }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E53E3E" strokeWidth="2"><path d="M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10"/></svg>
+            <span style={{ fontSize: 15, fontWeight: 600, color: "#E53E3E" }}>{texts.logout}</span>
+          </div>
+        </div>
+
       </div>
     </div>
   );
 }
 
-function SectionTitle({ children }) {
-  return <div style={{ fontWeight: 900, fontSize: 11, color: "#A87935", letterSpacing: "0.1em", textTransform: "uppercase", margin: "32px 0 12px 4px" }}>{children}</div>;
-}
-
-function StatCard({ label, value, dark, cardBg, border }) {
+function MenuItem({ icon, text }) {
   return (
-    <div style={{ background: cardBg, borderRadius: 16, padding: 16, border: `1px solid ${border}`, textAlign: "center" }}>
-       <div style={{ fontSize: 24, fontWeight: 900, color: "#A87935" }}>{value}</div>
-       <div style={{ fontSize: 11, color: textSecondary(dark), textTransform: "uppercase", marginTop: 4 }}>{label}</div>
+    <div style={{ padding: "16px 0", display: "flex", alignItems: "center", gap: 16, cursor: "pointer", borderBottom: "1px solid transparent" }}>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4299E1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        {icon}
+      </svg>
+      <span style={{ fontSize: 15, fontWeight: 600, color: "#2D3748" }}>{text}</span>
     </div>
   );
 }
 
-function textSecondary(dark) {
-  return dark ? "#888" : "#666";
-}
+const editInputStyle = {
+  border: "1px solid #E2E8F0", borderRadius: 8, padding: "8px 12px", fontSize: 14, outline: "none", color: "#2D3748", width: "100%"
+};

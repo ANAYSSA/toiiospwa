@@ -6,7 +6,7 @@ import { ref, get, set } from "firebase/database";
 import { useToast } from "@/components/Toast";
 import { useLanguage } from "@/components/LanguageContext";
 
-const FALLBACK_HALLS = [
+const REAL_HALLS = [
   { 
     id: "palazzo",
     name: "Palazzo Di Astana", 
@@ -16,11 +16,11 @@ const FALLBACK_HALLS = [
     capacity: "до 500 гостей", 
     rating: "4.9",
     reviewsCount: "342 отзыва",
-    image: "https://avatars.mds.yandex.net/get-altay/10355486/2a0000018a1a1a1a/orig",
+    image: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=800",
     description: "Дворцовый стиль в самом сердце столицы. Высокие потолки (8 метров), хрустальные люстры и безупречный сервис. Подходит для масштабных свадеб и правительственных приемов.",
     features: ["LED-экран 12x4м", "Профессиональный звук", "VIP-комнаты", "Гримерки", "Парковка на 100 машин"],
     cuisine: "Казахская, Европейская, Авторская",
-    url2gis: "https://2gis.kz/astana/firm/70000001021469339/tab/reviews",
+    url2gis: "https://2gis.kz/astana/firm/70000001021469339",
     reviews: [
       { user: "Арман", rating: 5, date: "2 недели назад", text: "Проводили здесь ұзату дочери. Всё прошло на высшем уровне." },
       { user: "Динара", rating: 5, date: "Месяц назад", text: "Шикарный интерьер! Фотографии получаются просто бомбические." }
@@ -35,11 +35,11 @@ const FALLBACK_HALLS = [
     capacity: "до 700 гостей", 
     rating: "5.0",
     reviewsCount: "820 отзывов",
-    image: "https://avatars.mds.yandex.net/get-altay/2818617/2a00000171a0b3a3c9b7b9f8f4a1a5b8b0a9/orig",
+    image: "https://images.unsplash.com/photo-1505236858219-8359eb29e329?auto=format&fit=crop&q=80&w=800",
     description: "Легендарный банкетный комплекс в КЦДС Атакент. Несколько залов (Gerey Khan, Pushkin, Small Hall).",
     features: ["Собственная кондитерская", "Летняя терраса", "Детская игровая", "Сцена-трансформер"],
     cuisine: "Национальная, Турецкая, Мировая",
-    url2gis: "https://2gis.kz/almaty/firm/9429940000785641/tab/reviews",
+    url2gis: "https://2gis.kz/almaty/firm/9429940000785641",
     reviews: [
       { user: "Марат", rating: 5, date: "3 дня назад", text: "Лучшее место в Алматы для больших тоев. Парковка огромная." }
     ]
@@ -53,11 +53,11 @@ const FALLBACK_HALLS = [
     capacity: "до 400 гостей", 
     rating: "4.8",
     reviewsCount: "156 отзывов",
-    image: "https://avatars.mds.yandex.net/get-altay/1932371/2a0000016e3c0e3e5b3e1c3e1e5e6b7c8a9d/orig",
+    image: "https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&q=80&w=800",
     description: "Один из самых востребованных залов Шымкента. Уютная атмосфера, современный дизайн и знаменитая южная кухня.",
     features: ["Зона для фотосессий", "Световое шоу", "Мощные кондиционеры"],
     cuisine: "Шымкентская (лучший беш), Восточная",
-    url2gis: "https://2gis.kz/shymkent/firm/70000001032398555/tab/reviews",
+    url2gis: "https://2gis.kz/shymkent/firm/70000001032398555",
     reviews: [
       { user: "Ербол", rating: 5, date: "Неделю назад", text: "Бешбармак просто пушка! Гости были в восторге." }
     ]
@@ -83,26 +83,34 @@ export default function HallsPage() {
       try {
         const snap = await get(ref(db, "Halls"));
         if (snap.exists()) {
-          const data = snap.val();
-          setHalls(Object.values(data));
+          const data = Object.values(snap.val());
+          // Если ссылки яндексовские или старые, форсированно обновляем на новые стабильные
+          if (data[0] && data[0].image.includes("yandex")) {
+             setHalls(REAL_HALLS);
+             if (auth.currentUser) {
+               const dbData = {};
+               REAL_HALLS.forEach(h => dbData[h.id] = h);
+               set(ref(db, "Halls"), dbData).catch(()=>{});
+             }
+          } else {
+             setHalls(data);
+          }
         } else {
-          // Если БД пустая, используем фоллбэк и пытаемся записать в БД
-          setHalls(FALLBACK_HALLS);
+          setHalls(REAL_HALLS);
           if (auth.currentUser) {
             const dbData = {};
-            FALLBACK_HALLS.forEach(h => dbData[h.id] = h);
-            set(ref(db, "Halls"), dbData).catch(() => {}); // silent fail if no write permission
+            REAL_HALLS.forEach(h => dbData[h.id] = h);
+            set(ref(db, "Halls"), dbData).catch(() => {});
           }
         }
       } catch (err) {
         console.error(err);
-        setHalls(FALLBACK_HALLS);
+        setHalls(REAL_HALLS);
       } finally {
         setLoading(false);
       }
     };
     
-    // Fetch data immediately or wait for auth if needed
     fetchHalls();
   }, []);
 
@@ -115,19 +123,16 @@ export default function HallsPage() {
   const cities = ["Все", ...new Set(halls.map((h) => h.city))];
   const filtered = filter === "Все" ? halls : halls.filter((h) => h.city === filter);
 
-  if (loading) {
-    return <div style={{ height: "100vh", background: bg, display: "flex", alignItems: "center", justifyContent: "center" }}><span className="spinner" /></div>;
-  }
+  if (loading) return <div style={{ height: "100vh", background: bg, display: "flex", alignItems: "center", justifyContent: "center" }} />;
 
   return (
     <div style={{ 
       background: bg, 
-      backgroundImage: darkTheme ? "url('https://www.transparenttextures.com/patterns/dark-matter.png')" : "url('https://www.transparenttextures.com/patterns/linen.png')",
       color: textPrimary, 
       minHeight: "100vh" 
     }}>
       <div style={{
-        background: darkTheme ? "rgba(10,10,10,0.8)" : "rgba(255,255,255,0.8)",
+        background: darkTheme ? "rgba(10,10,10,0.85)" : "rgba(255,255,255,0.85)",
         backdropFilter: "blur(20px)",
         paddingTop: "calc(16px + env(safe-area-inset-top))",
         paddingBottom: 12,
@@ -161,7 +166,7 @@ export default function HallsPage() {
             onClick={() => setSelectedHall(hall)}
             style={{
               background: cardBg, borderRadius: 24, marginBottom: 20, overflow: "hidden",
-              boxShadow: "0 10px 30px rgba(0,0,0,0.1)", cursor: "pointer", border: `1px solid ${border}`
+              boxShadow: darkTheme ? "0 4px 20px rgba(0,0,0,0.5)" : "0 4px 20px rgba(0,0,0,0.05)", cursor: "pointer", border: `1px solid ${border}`
             }}
           >
             <div style={{ height: 200, position: "relative" }}>
@@ -183,7 +188,7 @@ export default function HallsPage() {
       </div>
 
       {selectedHall && (
-        <div className="detail-sheet" style={{ background: bg, backgroundImage: darkTheme ? "url('https://www.transparenttextures.com/patterns/dark-matter.png')" : "url('https://www.transparenttextures.com/patterns/linen.png')" }}>
+        <div className="detail-sheet" style={{ background: bg }}>
           <button className="close-btn" onClick={() => setSelectedHall(null)}>✕</button>
           
           <img src={selectedHall.image} style={{ width: "100%", height: 300, objectFit: "cover" }} />
@@ -220,8 +225,8 @@ export default function HallsPage() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
               <h3 style={{ fontSize: 18, fontWeight: 800, margin: 0 }}>Отзывы</h3>
               {selectedHall.url2gis && (
-                <a href={selectedHall.url2gis} target="_blank" rel="noopener noreferrer" style={{ color: "#A87935", fontSize: 13, fontWeight: 700, textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
-                  Читать в 2GIS <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
+                <a href={selectedHall.url2gis} target="_blank" rel="noopener noreferrer" style={{ color: "#3182CE", fontSize: 14, fontWeight: 700, textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
+                  Открыть в 2GIS <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
                 </a>
               )}
             </div>
