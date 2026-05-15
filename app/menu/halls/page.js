@@ -1,10 +1,12 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { auth, db } from "@/lib/firebase";
+import { ref, get, set } from "firebase/database";
 import { useToast } from "@/components/Toast";
 import { useLanguage } from "@/components/LanguageContext";
 
-const REAL_HALLS = [
+const FALLBACK_HALLS = [
   { 
     id: "palazzo",
     name: "Palazzo Di Astana", 
@@ -14,13 +16,14 @@ const REAL_HALLS = [
     capacity: "до 500 гостей", 
     rating: "4.9",
     reviewsCount: "342 отзыва",
-    image: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=800",
+    image: "https://avatars.mds.yandex.net/get-altay/10355486/2a0000018a1a1a1a/orig",
     description: "Дворцовый стиль в самом сердце столицы. Высокие потолки (8 метров), хрустальные люстры и безупречный сервис. Подходит для масштабных свадеб и правительственных приемов.",
     features: ["LED-экран 12x4м", "Профессиональный звук", "VIP-комнаты", "Гримерки", "Парковка на 100 машин"],
     cuisine: "Казахская, Европейская, Авторская",
+    url2gis: "https://2gis.kz/astana/firm/70000001021469339/tab/reviews",
     reviews: [
-      { user: "Арман", rating: 5, date: "2 недели назад", text: "Проводили здесь ұзату дочери. Всё прошло на высшем уровне. Кухня очень вкусная, баурсаки горячие, мясо тает во рту." },
-      { user: "Динара", rating: 5, date: "Месяц назад", text: "Шикарный интерьер! Фотографии получаются просто бомбические. Сервис очень внимательный." }
+      { user: "Арман", rating: 5, date: "2 недели назад", text: "Проводили здесь ұзату дочери. Всё прошло на высшем уровне." },
+      { user: "Динара", rating: 5, date: "Месяц назад", text: "Шикарный интерьер! Фотографии получаются просто бомбические." }
     ]
   },
   { 
@@ -32,13 +35,13 @@ const REAL_HALLS = [
     capacity: "до 700 гостей", 
     rating: "5.0",
     reviewsCount: "820 отзывов",
-    image: "https://images.unsplash.com/photo-1505236858219-8359eb29e329?auto=format&fit=crop&q=80&w=800",
-    description: "Легендарный банкетный комплекс в КЦДС Атакент. Несколько залов (Gerey Khan, Pushkin, Small Hall). Уникальное сочетание восточного гостеприимства и современных технологий.",
+    image: "https://avatars.mds.yandex.net/get-altay/2818617/2a00000171a0b3a3c9b7b9f8f4a1a5b8b0a9/orig",
+    description: "Легендарный банкетный комплекс в КЦДС Атакент. Несколько залов (Gerey Khan, Pushkin, Small Hall).",
     features: ["Собственная кондитерская", "Летняя терраса", "Детская игровая", "Сцена-трансформер"],
     cuisine: "Национальная, Турецкая, Мировая",
+    url2gis: "https://2gis.kz/almaty/firm/9429940000785641/tab/reviews",
     reviews: [
-      { user: "Марат", rating: 5, date: "3 дня назад", text: "Лучшее место в Алматы для больших тоев. Парковка огромная, места много, кондиционеры работают отлично." },
-      { user: "Гульназ", rating: 5, date: "10 дней назад", text: "Сервис 10/10. Менеджеры помогают с любым вопросом." }
+      { user: "Марат", rating: 5, date: "3 дня назад", text: "Лучшее место в Алматы для больших тоев. Парковка огромная." }
     ]
   },
   { 
@@ -50,12 +53,13 @@ const REAL_HALLS = [
     capacity: "до 400 гостей", 
     rating: "4.8",
     reviewsCount: "156 отзывов",
-    image: "https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&q=80&w=800",
+    image: "https://avatars.mds.yandex.net/get-altay/1932371/2a0000016e3c0e3e5b3e1c3e1e5e6b7c8a9d/orig",
     description: "Один из самых востребованных залов Шымкента. Уютная атмосфера, современный дизайн и знаменитая южная кухня.",
     features: ["Зона для фотосессий", "Световое шоу", "Мощные кондиционеры"],
     cuisine: "Шымкентская (лучший беш), Восточная",
+    url2gis: "https://2gis.kz/shymkent/firm/70000001032398555/tab/reviews",
     reviews: [
-      { user: "Ербол", rating: 5, date: "Неделю назад", text: "Бешбармак просто пушка! Гости были в восторге. Зал чистый, звук хороший." }
+      { user: "Ербол", rating: 5, date: "Неделю назад", text: "Бешбармак просто пушка! Гости были в восторге." }
     ]
   }
 ];
@@ -66,12 +70,40 @@ export default function HallsPage() {
   const [darkTheme, setDarkTheme] = useState(false);
   const [filter, setFilter] = useState("Все");
   const [selectedHall, setSelectedHall] = useState(null);
+  const [halls, setHalls] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     try {
       const saved = localStorage.getItem("theme");
       if (saved === "dark") setDarkTheme(true);
     } catch (e) {}
+
+    const fetchHalls = async () => {
+      try {
+        const snap = await get(ref(db, "Halls"));
+        if (snap.exists()) {
+          const data = snap.val();
+          setHalls(Object.values(data));
+        } else {
+          // Если БД пустая, используем фоллбэк и пытаемся записать в БД
+          setHalls(FALLBACK_HALLS);
+          if (auth.currentUser) {
+            const dbData = {};
+            FALLBACK_HALLS.forEach(h => dbData[h.id] = h);
+            set(ref(db, "Halls"), dbData).catch(() => {}); // silent fail if no write permission
+          }
+        }
+      } catch (err) {
+        console.error(err);
+        setHalls(FALLBACK_HALLS);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    // Fetch data immediately or wait for auth if needed
+    fetchHalls();
   }, []);
 
   const bg = darkTheme ? "#0A0A0A" : "#F8F9FA";
@@ -80,8 +112,12 @@ export default function HallsPage() {
   const textSecondary = darkTheme ? "#888" : "#666";
   const border = darkTheme ? "#222" : "#EEE";
 
-  const cities = ["Все", ...new Set(REAL_HALLS.map((h) => h.city))];
-  const filtered = filter === "Все" ? REAL_HALLS : REAL_HALLS.filter((h) => h.city === filter);
+  const cities = ["Все", ...new Set(halls.map((h) => h.city))];
+  const filtered = filter === "Все" ? halls : halls.filter((h) => h.city === filter);
+
+  if (loading) {
+    return <div style={{ height: "100vh", background: bg, display: "flex", alignItems: "center", justifyContent: "center" }}><span className="spinner" /></div>;
+  }
 
   return (
     <div style={{ 
@@ -90,7 +126,6 @@ export default function HallsPage() {
       color: textPrimary, 
       minHeight: "100vh" 
     }}>
-      {/* List Header */}
       <div style={{
         background: darkTheme ? "rgba(10,10,10,0.8)" : "rgba(255,255,255,0.8)",
         backdropFilter: "blur(20px)",
@@ -119,7 +154,6 @@ export default function HallsPage() {
         </div>
       </div>
 
-      {/* Hall List */}
       <div style={{ padding: "16px 16px 120px" }}>
         {filtered.map((hall) => (
           <div
@@ -148,7 +182,6 @@ export default function HallsPage() {
         ))}
       </div>
 
-      {/* Hall Detail Sheet */}
       {selectedHall && (
         <div className="detail-sheet" style={{ background: bg, backgroundImage: darkTheme ? "url('https://www.transparenttextures.com/patterns/dark-matter.png')" : "url('https://www.transparenttextures.com/patterns/linen.png')" }}>
           <button className="close-btn" onClick={() => setSelectedHall(null)}>✕</button>
@@ -174,7 +207,7 @@ export default function HallsPage() {
 
             <h3 style={{ fontSize: 18, fontWeight: 800, marginTop: 24, marginBottom: 12 }}>Особенности</h3>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {selectedHall.features.map(f => (
+              {selectedHall.features?.map(f => (
                 <span key={f} style={{ background: darkTheme ? "#222" : "#F1F3F4", padding: "6px 12px", borderRadius: 8, fontSize: 13, fontWeight: 600 }}>{f}</span>
               ))}
             </div>
@@ -184,8 +217,16 @@ export default function HallsPage() {
 
             <div style={{ height: 1, background: border, margin: "20px 0" }} />
 
-            <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 16 }}>Отзывы из 2ГИС</h3>
-            {selectedHall.reviews.map((r, i) => (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <h3 style={{ fontSize: 18, fontWeight: 800, margin: 0 }}>Отзывы</h3>
+              {selectedHall.url2gis && (
+                <a href={selectedHall.url2gis} target="_blank" rel="noopener noreferrer" style={{ color: "#A87935", fontSize: 13, fontWeight: 700, textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
+                  Читать в 2GIS <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
+                </a>
+              )}
+            </div>
+
+            {selectedHall.reviews?.map((r, i) => (
               <div key={i} style={{ background: cardBg, padding: 16, borderRadius: 16, marginBottom: 12, border: `1px solid ${border}` }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
                   <span style={{ fontWeight: 800 }}>{r.user}</span>
@@ -198,7 +239,7 @@ export default function HallsPage() {
 
             <button
               onClick={() => { setSelectedHall(null); router.push("/menu/booking"); }}
-              style={{ width: "100%", height: 60, marginTop: 20, background: "linear-gradient(135deg, #A87935, #800020)", color: "white", border: "none", borderRadius: 16, fontWeight: 800, fontSize: 16, boxShadow: "0 10px 20px rgba(128,0,32,0.3)" }}
+              style={{ width: "100%", height: 60, marginTop: 20, background: "linear-gradient(135deg, #A87935, #800020)", color: "white", border: "none", borderRadius: 16, fontWeight: 800, fontSize: 16, boxShadow: "0 10px 20px rgba(128,0,32,0.3)", cursor: "pointer" }}
             >
               Забронировать этот зал
             </button>

@@ -1,43 +1,120 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { auth } from "@/lib/firebase";
-import { signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
+import { auth, db } from "@/lib/firebase";
+import { RecaptchaVerifier, signInWithPhoneNumber, onAuthStateChanged } from "firebase/auth";
+import { ref, get, set } from "firebase/database";
 import { useToast, ToastProvider } from "@/components/Toast";
 import Link from "next/link";
 
 function LoginInner() {
   const router = useRouter();
   const showToast = useToast();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [phone, setPhone] = useState("+7");
+  const [code, setCode] = useState("");
+  const [step, setStep] = useState(1); // 1: Phone, 2: Code, 3: New User Info
   const [loading, setLoading] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const [confirmationResult, setConfirmationResult] = useState(null);
+  const [newUserForm, setNewUserForm] = useState({ name: "", surname: "" });
+  const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
-      if (user) router.replace("/menu/home");
-      else setCheckingAuth(false);
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      if (user && step === 1) {
+        // Check if user has name in DB
+        const snap = await get(ref(db, "Users/" + user.uid));
+        if (snap.exists() && snap.val().name) {
+          router.replace("/menu/home");
+        } else {
+          setCurrentUser(user);
+          setStep(3);
+          setCheckingAuth(false);
+        }
+      } else {
+        setCheckingAuth(false);
+      }
     });
     return () => unsub();
-  }, [router]);
+  }, [router, step]);
 
-  const handleLogin = async (e) => {
+  useEffect(() => {
+    if (!window.recaptchaVerifier) {
+      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        'size': 'invisible',
+        'callback': (response) => {
+          // reCAPTCHA solved
+        }
+      });
+    }
+  }, []);
+
+  const handleSendSMS = async (e) => {
     e.preventDefault();
-    if (!email.trim() || !password.trim()) {
+    if (phone.length < 11) {
+      showToast("Введите корректный номер");
+      return;
+    }
+    setLoading(true);
+    const appVerifier = window.recaptchaVerifier;
+    try {
+      const confirmation = await signInWithPhoneNumber(auth, phone, appVerifier);
+      setConfirmationResult(confirmation);
+      setStep(2);
+      showToast("СМС отправлено!");
+    } catch (err) {
+      console.error(err);
+      showToast("Ошибка отправки СМС: " + err.message);
+      if (window.recaptchaVerifier) window.recaptchaVerifier.render().then(widgetId => grecaptcha.reset(widgetId));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyCode = async (e) => {
+    e.preventDefault();
+    if (code.length < 6) {
+      showToast("Введите код из СМС");
+      return;
+    }
+    setLoading(true);
+    try {
+      const result = await confirmationResult.confirm(code);
+      const user = result.user;
+      const snap = await get(ref(db, "Users/" + user.uid));
+      if (!snap.exists() || !snap.val().name) {
+        setCurrentUser(user);
+        setStep(3); // Go to profile creation
+      } else {
+        router.replace("/menu/home");
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Неверный код");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveProfile = async (e) => {
+    e.preventDefault();
+    if (!newUserForm.name || !newUserForm.surname) {
       showToast("Заполните все поля");
       return;
     }
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email.trim(), password);
+      await set(ref(db, "Users/" + currentUser.uid), {
+        uid: currentUser.uid,
+        name: newUserForm.name,
+        surname: newUserForm.surname,
+        phoneNumber: currentUser.phoneNumber,
+        city: "Астана"
+      });
       router.replace("/menu/home");
     } catch (err) {
-      let msg = "Ошибка входа";
-      if (err.code === "auth/user-not-found") msg = "Пользователь не найден";
-      else if (err.code === "auth/wrong-password") msg = "Неверный пароль";
-      else if (err.code === "auth/invalid-email") msg = "Некорректный email";
-      showToast(msg);
+      console.error(err);
+      showToast("Ошибка сохранения");
     } finally {
       setLoading(false);
     }
@@ -80,63 +157,67 @@ function LoginInner() {
         </p>
       </div>
 
-      <form onSubmit={handleLogin} style={{ width: "100%", maxWidth: 380, marginTop: 40, position: "relative", zIndex: 1 }}>
-        <div style={{ position: "relative", marginBottom: 16 }}>
-          <input
-            className="input-gold"
-            placeholder="Ваш Email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoCapitalize="none"
-          />
-        </div>
+      <div style={{ width: "100%", maxWidth: 380, marginTop: 40, position: "relative", zIndex: 1 }}>
+        <div id="recaptcha-container"></div>
         
-        <div style={{ position: "relative", marginBottom: 12 }}>
-          <input
-            className="input-gold"
-            placeholder="Пароль"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </div>
+        {step === 1 && (
+          <form onSubmit={handleSendSMS}>
+            <div style={{ position: "relative", marginBottom: 24 }}>
+              <input
+                className="input-gold"
+                placeholder="Номер телефона (+7...)"
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+              />
+            </div>
+            <button type="submit" disabled={loading} style={btnStyle}>
+              {loading ? <span className="spinner" /> : "Получить СМС код"}
+            </button>
+          </form>
+        )}
 
-        <div style={{ textAlign: "right", marginBottom: 24 }}>
-          <Link href="/forgot-password" style={{ color: "#A87935", fontSize: 14, textDecoration: "none", fontWeight: 600 }}>
-            Забыли пароль?
-          </Link>
-        </div>
+        {step === 2 && (
+          <form onSubmit={handleVerifyCode}>
+            <div style={{ color: "#888", marginBottom: 16, textAlign: "center", fontSize: 14 }}>
+              СМС отправлено на {phone}
+            </div>
+            <div style={{ position: "relative", marginBottom: 24 }}>
+              <input
+                className="input-gold"
+                placeholder="Код из СМС"
+                type="number"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <button type="submit" disabled={loading} style={btnStyle}>
+              {loading ? <span className="spinner" /> : "Подтвердить вход"}
+            </button>
+            <div style={{ textAlign: "center", marginTop: 16 }}>
+              <button type="button" onClick={() => setStep(1)} style={{ background: "transparent", color: "#A87935", border: "none", fontWeight: 600 }}>Изменить номер</button>
+            </div>
+          </form>
+        )}
 
-        <button
-          type="submit"
-          disabled={loading}
-          style={{
-            width: "100%",
-            height: 58,
-            background: "linear-gradient(135deg, #A87935, #800020)",
-            color: "#FFFBEB",
-            fontWeight: 800,
-            border: "none",
-            borderRadius: 16,
-            fontSize: 16,
-            cursor: "pointer",
-            boxShadow: "0 10px 25px rgba(128,0,32,0.3)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          {loading ? <span className="spinner" style={{ width: 20, height: 20 }} /> : "Войти в систему"}
-        </button>
-
-        <div style={{ textAlign: "center", marginTop: 32 }}>
-          <span style={{ color: "#777", fontSize: 14 }}>Ещё нет аккаунта? </span>
-          <Link href="/register" style={{ color: "#FFFBEB", fontWeight: 700, fontSize: 14, textDecoration: "none", borderBottom: "1px solid #A87935" }}>
-            Создать аккаунт
-          </Link>
-        </div>
-      </form>
+        {step === 3 && (
+          <form onSubmit={handleSaveProfile}>
+            <div style={{ color: "#FFFBEB", marginBottom: 24, textAlign: "center", fontSize: 18, fontWeight: 700 }}>
+              Давайте познакомимся
+            </div>
+            <div style={{ position: "relative", marginBottom: 12 }}>
+              <input className="input-gold" placeholder="Ваше Имя" value={newUserForm.name} onChange={(e) => setNewUserForm({...newUserForm, name: e.target.value})} />
+            </div>
+            <div style={{ position: "relative", marginBottom: 24 }}>
+              <input className="input-gold" placeholder="Ваша Фамилия" value={newUserForm.surname} onChange={(e) => setNewUserForm({...newUserForm, surname: e.target.value})} />
+            </div>
+            <button type="submit" disabled={loading} style={btnStyle}>
+              {loading ? <span className="spinner" /> : "Сохранить профиль"}
+            </button>
+          </form>
+        )}
+      </div>
 
       <div style={{ marginTop: "auto", paddingBottom: 30, textAlign: "center", opacity: 0.5, fontSize: 11, color: "#888" }}>
         © 2026 toi.kz • Сделано с любовью в Казахстане
@@ -144,6 +225,13 @@ function LoginInner() {
     </div>
   );
 }
+
+const btnStyle = {
+  width: "100%", height: 58, background: "linear-gradient(135deg, #A87935, #800020)",
+  color: "#FFFBEB", fontWeight: 800, border: "none", borderRadius: 16, fontSize: 16,
+  cursor: "pointer", boxShadow: "0 10px 25px rgba(128,0,32,0.3)", display: "flex",
+  alignItems: "center", justifyContent: "center"
+};
 
 export default function LoginPage() {
   return (
