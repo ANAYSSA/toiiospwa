@@ -73,7 +73,7 @@ export default function ProfilePage() {
   };
 
   const handleSaveProfile = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (user) {
       await update(ref(db, "Users/" + user.uid), { name: editForm.name, surname: editForm.surname, email: editForm.email });
       setProfile({ ...profile, name: editForm.name, surname: editForm.surname, email: editForm.email });
@@ -92,7 +92,7 @@ export default function ProfilePage() {
         <button onClick={() => router.push("/menu/home")} style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}>
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2D3748" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
         </button>
-        <button onClick={() => isEditing ? handleSaveProfile(new Event('submit')) : setIsEditing(true)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+        <button onClick={() => isEditing ? handleSaveProfile() : setIsEditing(true)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}>
           {isEditing ? (
             <span style={{color: "#3182CE", fontWeight: 600}}>Save</span>
           ) : (
@@ -158,13 +158,13 @@ export default function ProfilePage() {
         {/* Menu Items */}
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <MenuItem icon={<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>} text={texts.fav} />
-          <MenuItem icon={<rect x="2" y="5" width="20" height="14" rx="2" ry="2"/><line x1="2" y1="10" x2="22" y2="10"/>} text={texts.payment} />
+          <MenuItem icon={<><rect x="2" y="5" width="20" height="14" rx="2" ry="2"/><line x1="2" y1="10" x2="22" y2="10"/></>} text={texts.payment} />
           <div onClick={() => changeLang(lang === "ru" ? "kz" : "ru")} style={{ background: "#F7FAFC", borderRadius: 12, padding: "16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 16 }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4299E1" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
             <span style={{ fontSize: 15, fontWeight: 600, color: "#2D3748", flex: 1 }}>Язык / Тіл</span>
             <span style={{ fontSize: 13, fontWeight: 700, color: "#3182CE", background: "#EBF8FF", padding: "4px 8px", borderRadius: 6 }}>{lang.toUpperCase()}</span>
           </div>
-          <MenuItem icon={<path d="M21.21 15.89A10 10 0 1 1 8 2.83M22 12A10 10 0 0 0 12 2v10z"/>} text={texts.settings} />
+          <MenuItem icon={<><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></>} text={texts.settings} />
         </div>
 
         {/* Logout */}
