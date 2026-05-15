@@ -12,7 +12,7 @@ function LoginInner() {
   const showToast = useToast();
   const [phone, setPhone] = useState("+7");
   const [code, setCode] = useState("");
-  const [step, setStep] = useState(1); // 1: Phone, 2: Code, 3: New User Info
+  const [step, setStep] = useState(1); 
   const [loading, setLoading] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [confirmationResult, setConfirmationResult] = useState(null);
@@ -22,7 +22,6 @@ function LoginInner() {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (user && step === 1) {
-        // Check if user has name in DB
         const snap = await get(ref(db, "Users/" + user.uid));
         if (snap.exists() && snap.val().name) {
           router.replace("/menu/home");
@@ -39,15 +38,19 @@ function LoginInner() {
   }, [router, step]);
 
   useEffect(() => {
-    if (!window.recaptchaVerifier) {
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        'size': 'invisible',
-        'callback': (response) => {
-          // reCAPTCHA solved
+    // Only init Recaptcha when the container is in the DOM
+    if (!checkingAuth && step === 1 && !window.recaptchaVerifier) {
+      setTimeout(() => {
+        try {
+          window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+            'size': 'invisible'
+          });
+        } catch(e) {
+          console.error("Recaptcha error:", e);
         }
-      });
+      }, 100);
     }
-  }, []);
+  }, [checkingAuth, step]);
 
   const handleSendSMS = async (e) => {
     e.preventDefault();
@@ -56,16 +59,15 @@ function LoginInner() {
       return;
     }
     setLoading(true);
-    const appVerifier = window.recaptchaVerifier;
     try {
-      const confirmation = await signInWithPhoneNumber(auth, phone, appVerifier);
+      const confirmation = await signInWithPhoneNumber(auth, phone, window.recaptchaVerifier);
       setConfirmationResult(confirmation);
       setStep(2);
       showToast("СМС отправлено!");
     } catch (err) {
       console.error(err);
-      showToast("Ошибка отправки СМС: " + err.message);
-      if (window.recaptchaVerifier) window.recaptchaVerifier.render().then(widgetId => grecaptcha.reset(widgetId));
+      showToast("Ошибка отправки: " + err.message);
+      if (window.recaptchaVerifier) window.recaptchaVerifier.render().then(id => window.grecaptcha.reset(id));
     } finally {
       setLoading(false);
     }
@@ -74,7 +76,7 @@ function LoginInner() {
   const handleVerifyCode = async (e) => {
     e.preventDefault();
     if (code.length < 6) {
-      showToast("Введите код из СМС");
+      showToast("Введите код");
       return;
     }
     setLoading(true);
@@ -84,7 +86,7 @@ function LoginInner() {
       const snap = await get(ref(db, "Users/" + user.uid));
       if (!snap.exists() || !snap.val().name) {
         setCurrentUser(user);
-        setStep(3); // Go to profile creation
+        setStep(3); 
       } else {
         router.replace("/menu/home");
       }
@@ -113,20 +115,11 @@ function LoginInner() {
       });
       router.replace("/menu/home");
     } catch (err) {
-      console.error(err);
       showToast("Ошибка сохранения");
     } finally {
       setLoading(false);
     }
   };
-
-  if (checkingAuth) {
-    return (
-      <div style={{ height: "100vh", background: "#0A0A0A", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <span className="spinner" />
-      </div>
-    );
-  }
 
   return (
     <div style={{
@@ -134,24 +127,17 @@ function LoginInner() {
       background: "#0A0A0A",
       backgroundImage: "url('https://www.transparenttextures.com/patterns/dark-matter.png')",
       paddingTop: "calc(60px + env(safe-area-inset-top))",
-      paddingLeft: 24,
-      paddingRight: 24,
+      paddingLeft: 24, paddingRight: 24,
       position: "relative",
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
+      display: "flex", flexDirection: "column", alignItems: "center",
+      transition: "opacity 0.3s ease",
+      opacity: checkingAuth ? 0 : 1 // Плавный переход вместо экрана загрузки
     }}>
       <div className="top-glow" />
 
       <div style={{ textAlign: "center", position: "relative", zIndex: 1 }}>
-        <img 
-          src="/icons/logo.png" 
-          alt="toi.kz" 
-          style={{ width: 80, height: 80, borderRadius: 20, marginBottom: 20, boxShadow: "0 10px 30px rgba(0,0,0,0.5)" }} 
-        />
-        <h1 style={{ color: "#FFFBEB", fontSize: 32, fontWeight: 900, margin: 0, letterSpacing: "-0.02em" }}>
-          toi.kz
-        </h1>
+        <img src="/icons/logo.png" alt="toi.kz" style={{ width: 80, height: 80, borderRadius: 20, marginBottom: 20, boxShadow: "0 10px 30px rgba(0,0,0,0.5)" }} />
+        <h1 style={{ color: "#FFFBEB", fontSize: 32, fontWeight: 900, margin: 0, letterSpacing: "-0.02em" }}>toi.kz</h1>
         <p style={{ color: "#A87935", fontSize: 15, marginTop: 8, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em" }}>
           Премиум сервис для вашего тоя
         </p>
@@ -162,14 +148,8 @@ function LoginInner() {
         
         {step === 1 && (
           <form onSubmit={handleSendSMS}>
-            <div style={{ position: "relative", marginBottom: 24 }}>
-              <input
-                className="input-gold"
-                placeholder="Номер телефона (+7...)"
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-              />
+            <div style={{ marginBottom: 24 }}>
+              <input className="input-gold" placeholder="Номер телефона (+7...)" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
             </div>
             <button type="submit" disabled={loading} style={btnStyle}>
               {loading ? <span className="spinner" /> : "Получить СМС код"}
@@ -182,15 +162,8 @@ function LoginInner() {
             <div style={{ color: "#888", marginBottom: 16, textAlign: "center", fontSize: 14 }}>
               СМС отправлено на {phone}
             </div>
-            <div style={{ position: "relative", marginBottom: 24 }}>
-              <input
-                className="input-gold"
-                placeholder="Код из СМС"
-                type="number"
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                autoFocus
-              />
+            <div style={{ marginBottom: 24 }}>
+              <input className="input-gold" placeholder="Код из СМС" type="number" value={code} onChange={(e) => setCode(e.target.value)} autoFocus />
             </div>
             <button type="submit" disabled={loading} style={btnStyle}>
               {loading ? <span className="spinner" /> : "Подтвердить вход"}
@@ -206,10 +179,10 @@ function LoginInner() {
             <div style={{ color: "#FFFBEB", marginBottom: 24, textAlign: "center", fontSize: 18, fontWeight: 700 }}>
               Давайте познакомимся
             </div>
-            <div style={{ position: "relative", marginBottom: 12 }}>
+            <div style={{ marginBottom: 12 }}>
               <input className="input-gold" placeholder="Ваше Имя" value={newUserForm.name} onChange={(e) => setNewUserForm({...newUserForm, name: e.target.value})} />
             </div>
-            <div style={{ position: "relative", marginBottom: 24 }}>
+            <div style={{ marginBottom: 24 }}>
               <input className="input-gold" placeholder="Ваша Фамилия" value={newUserForm.surname} onChange={(e) => setNewUserForm({...newUserForm, surname: e.target.value})} />
             </div>
             <button type="submit" disabled={loading} style={btnStyle}>
