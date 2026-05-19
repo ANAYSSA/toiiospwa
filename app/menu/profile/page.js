@@ -3,9 +3,10 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { auth, db } from "@/lib/firebase";
 import { signOut, onAuthStateChanged } from "firebase/auth";
-import { ref, get, update } from "firebase/database";
+import { ref, get, update, query, orderByChild, equalTo } from "firebase/database";
 import { useToast } from "@/components/Toast";
 import { useLanguage } from "@/components/LanguageContext";
+import { isValidEmail, normalizeEmail, sanitizeText } from "@/lib/sanitize";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -34,7 +35,7 @@ export default function ProfilePage() {
           setProfile(data);
           setEditForm({ name: data.name || "", surname: data.surname || "", email: data.email || "" });
           
-          const bookingsSnap = await get(ref(db, "Bookings"));
+          const bookingsSnap = await get(query(ref(db, "Bookings"), orderByChild("userId"), equalTo(u.uid)));
           let userEvents = 0;
           if (bookingsSnap.exists()) {
             bookingsSnap.forEach(child => { if (child.val().userId === u.uid) userEvents++; });
@@ -50,6 +51,16 @@ export default function ProfilePage() {
   const handleAvatarChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      showToast("Only image files are allowed");
+      e.target.value = "";
+      return;
+    }
+    if (file.size > 1024 * 1024) {
+      showToast("Image must be 1MB or smaller");
+      e.target.value = "";
+      return;
+    }
     const reader = new FileReader();
     reader.onload = async (ev) => {
       const img = new Image();
@@ -64,6 +75,11 @@ export default function ProfilePage() {
         const sy = (img.height - minSide) / 2;
         ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
         const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
+        if (dataUrl.length > 350000) {
+          showToast("Image is too large after compression");
+          return;
+        }
+        // TODO: Move avatar uploads to Firebase Storage with secure storage.rules.
         setProfile({ ...profile, avatar: dataUrl });
         if (user) await update(ref(db, "Users/" + user.uid), { avatar: dataUrl });
       };
@@ -75,8 +91,18 @@ export default function ProfilePage() {
   const handleSaveProfile = async (e) => {
     if (e) e.preventDefault();
     if (user) {
-      await update(ref(db, "Users/" + user.uid), { name: editForm.name, surname: editForm.surname, email: editForm.email });
-      setProfile({ ...profile, name: editForm.name, surname: editForm.surname, email: editForm.email });
+      const safeEmail = normalizeEmail(editForm.email);
+      if (safeEmail && !isValidEmail(safeEmail)) {
+        showToast("Invalid email");
+        return;
+      }
+      const safeProfile = {
+        name: sanitizeText(editForm.name, 80),
+        surname: sanitizeText(editForm.surname, 80),
+        email: safeEmail,
+      };
+      await update(ref(db, "Users/" + user.uid), safeProfile);
+      setProfile({ ...profile, ...safeProfile });
       setIsEditing(false);
       showToast("Сохранено");
     }

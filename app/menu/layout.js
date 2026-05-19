@@ -1,9 +1,7 @@
 "use client";
-import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { auth } from "@/lib/firebase";
-import { onAuthStateChanged } from "firebase/auth";
 import { ToastProvider } from "@/components/Toast";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 
 const navItems = [
   {
@@ -65,20 +63,9 @@ const navItems = [
 export default function MenuLayout({ children }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [authChecked, setAuthChecked] = useState(false);
+  const { checking } = useRequireAuth();
 
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        router.replace("/");
-      } else {
-        setAuthChecked(true);
-      }
-    });
-    return () => unsub();
-  }, [router]);
-
-  if (!authChecked) {
+  if (checking) {
     return (
       <div style={{ minHeight: "100vh", background: "#0A0A0A", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <span className="spinner" style={{ width: 30, height: 30, borderWidth: 3 }} />

@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useToast } from "@/components/Toast";
 import { useLanguage } from "@/components/LanguageContext";
+import { isValidEmail, normalizeEmail, sanitizeText } from "@/lib/sanitize";
 
 const T = {
   ru: {
@@ -79,8 +80,18 @@ export default function AboutPage() {
   }, []);
 
   const handleContactSubmit = () => {
-    if (!contactForm.name.trim() || !contactForm.message.trim()) {
+    const safeContact = {
+      name: sanitizeText(contactForm.name, 80),
+      email: normalizeEmail(contactForm.email),
+      message: sanitizeText(contactForm.message, 1000),
+    };
+
+    if (!safeContact.name || !safeContact.message) {
       showToast("Заполните имя и сообщение");
+      return;
+    }
+    if (safeContact.email && !isValidEmail(safeContact.email)) {
+      showToast("Invalid email");
       return;
     }
     setSending(true);

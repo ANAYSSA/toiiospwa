@@ -54,9 +54,15 @@ const hallsData = {
   }
 };
 
-const DB_URL = "https://toikz-5921a-default-rtdb.firebaseio.com/Halls.json";
+const DB_URL = process.env.FIREBASE_DATABASE_URL
+  ? `${process.env.FIREBASE_DATABASE_URL.replace(/\/$/, "")}/Halls.json`
+  : null;
 
 async function seed() {
+  if (!DB_URL) {
+    throw new Error("Missing FIREBASE_DATABASE_URL. Example: https://your_project-default-rtdb.firebaseio.com");
+  }
+
   try {
     const res = await fetch(DB_URL, {
       method: "PUT",
