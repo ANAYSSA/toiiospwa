@@ -1,53 +1,87 @@
-// Basic service worker for PWA install support
-const CACHE_NAME = "toikz-v1";
+const CACHE_NAME = "toikz-v2-secure";
 const PRECACHE = ["/", "/manifest.json"];
 
-self.addEventListener("install", (e) => {
-  e.waitUntil(
+const isPrivatePath = (url) =>
+  url.pathname.startsWith("/menu") ||
+  url.pathname.startsWith("/admin") ||
+  url.pathname.startsWith("/profile") ||
+  url.pathname.startsWith("/booking");
+
+const isFirebaseRequest = (url) =>
+  url.hostname.includes("firebaseio.com") ||
+  url.hostname.includes("googleapis.com") ||
+  url.hostname.includes("firebaseapp.com") ||
+  url.hostname.includes("firebasestorage.googleapis.com") ||
+  url.hostname.includes("identitytoolkit.googleapis.com") ||
+  url.hostname.includes("securetoken.googleapis.com");
+
+const hasAuthorization = (request) => request.headers.has("Authorization");
+
+self.addEventListener("install", (event) => {
+  event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE)).catch(() => {})
   );
   self.skipWaiting();
 });
 
-self.addEventListener("activate", (e) => {
-  e.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
-    )
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)))
+      )
   );
   self.clients.claim();
 });
 
-self.addEventListener("fetch", (e) => {
-  const req = e.request;
-  // Only handle GET
-  if (req.method !== "GET") return;
-  // Network first for navigation, fallback to cache
-  if (req.mode === "navigate") {
-    e.respondWith(
-      fetch(req)
-        .then((res) => {
-          const clone = res.clone();
-          caches.open(CACHE_NAME).then((c) => c.put(req, clone)).catch(() => {});
-          return res;
+self.addEventListener("fetch", (event) => {
+  const request = event.request;
+  const url = new URL(request.url);
+
+  if (
+    request.method !== "GET" ||
+    hasAuthorization(request) ||
+    isPrivatePath(url) ||
+    isFirebaseRequest(url)
+  ) {
+    event.respondWith(fetch(request));
+    return;
+  }
+
+  if (request.mode === "navigate") {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response && response.ok && url.origin === self.location.origin && !isPrivatePath(url)) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone)).catch(() => {});
+          }
+          return response;
         })
-        .catch(() => caches.match(req).then((m) => m || caches.match("/")))
+        .catch(() => caches.match(request).then((match) => match || caches.match("/")))
     );
     return;
   }
-  // Stale while revalidate for everything else
-  e.respondWith(
-    caches.match(req).then((cached) => {
-      const fetchPromise = fetch(req)
-        .then((networkRes) => {
-          if (networkRes && networkRes.status === 200 && networkRes.type === "basic") {
-            const clone = networkRes.clone();
-            caches.open(CACHE_NAME).then((c) => c.put(req, clone)).catch(() => {});
+
+  event.respondWith(
+    caches.match(request).then((cached) => {
+      const network = fetch(request)
+        .then((response) => {
+          if (
+            response &&
+            response.status === 200 &&
+            response.type === "basic" &&
+            url.origin === self.location.origin
+          ) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone)).catch(() => {});
           }
-          return networkRes;
+          return response;
         })
         .catch(() => cached);
-      return cached || fetchPromise;
+
+      return cached || network;
     })
   );
 });

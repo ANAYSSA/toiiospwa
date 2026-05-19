@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/Toast";
+import { sanitizeText } from "@/lib/sanitize";
 
 const KZ_CITIES = [
   "Алматы", "Астана", "Шымкент", "Актобе", "Караганда",
@@ -106,7 +107,7 @@ export default function BookingPage() {
             <input
               type="date"
               value={date}
-              onChange={(e) => setDate(e.target.value)}
+              onChange={(e) => setDate(sanitizeText(e.target.value, 10))}
               min={new Date().toISOString().split("T")[0]}
               style={{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer", width: "100%", height: "100%" }}
             />

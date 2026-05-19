@@ -62,11 +62,11 @@ vercel
 
 ### 1. Создать Web App в Firebase Console
 
-1. Зайди в https://console.firebase.google.com → выбери проект **toikz-5921a**
+1. Зайди в https://console.firebase.google.com → выбери свой Firebase проект
 2. ⚙️ Project Settings → вкладка **General**
 3. Скролл вниз до **Your apps** → нажми **Add app** → **Web (</>)**
 4. Введи название "ToiKz Web" → Register app
-5. Скопируй блок `firebaseConfig` — там будет нужный `appId` (формат `1:542357949375:web:...`)
+5. Скопируй блок `firebaseConfig` — там будет нужный `appId` (формат `1:your_sender_id:web:...`)
 
 ### 2. Добавить домен в Authorized
 
@@ -173,3 +173,59 @@ toikz-pwa/
 ---
 
 Готово! Если что-то не сработает — пиши.
+
+---
+
+## Environment variables
+
+Create `.env.local` locally from `.env.example` and fill it with the Firebase Web App config from Firebase Console.
+
+Required variables:
+
+```bash
+NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_api_key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_DATABASE_URL=https://your_project-default-rtdb.firebaseio.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+```
+
+Do not commit `.env.local`, `.env.production`, service account JSON files, private keys, or Firebase Admin SDK credentials. `NEXT_PUBLIC_FIREBASE_*` values are visible in the browser by design; Firebase security must be enforced with Firebase Auth, Realtime Database Rules, Storage Rules, Vercel env variables, and restricted Google Cloud API keys.
+
+If real Firebase keys were ever committed to GitHub history, deleting them from files is not enough. Rotate or restrict the exposed Firebase API key in Google Cloud Console, update Vercel env variables, and redeploy.
+
+## Firebase rules
+
+Realtime Database rules are stored in `database.rules.json`.
+
+Publish them manually:
+
+1. Open Firebase Console.
+2. Go to Realtime Database -> Rules.
+3. Paste the contents of `database.rules.json`.
+4. Click Publish.
+
+Storage rules are stored in `storage.rules`. Publish them before enabling user uploads. Avatar uploads are currently compressed client-side and limited to 1MB; production should move avatars fully to Firebase Storage.
+
+Admin access is enforced in Realtime Database rules through:
+
+```text
+admins/$uid === true
+```
+
+Frontend role helpers are only for UI decisions. They are not a security boundary.
+
+## Vercel setup
+
+1. Open Vercel Project Settings -> Environment Variables.
+2. Add every required `NEXT_PUBLIC_FIREBASE_*` variable listed above.
+3. Open Firebase Console -> Authentication -> Settings -> Authorized domains.
+4. Add:
+   - `localhost`
+   - your Vercel preview domain
+   - your production domain
+5. Redeploy the project.
+
+Do not upload `.env.local` to GitHub or Vercel source control.

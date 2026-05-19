@@ -12,13 +12,10 @@ import {
   User,
   Users,
 } from "lucide-react";
+import { isValidKazakhstanPhone, normalizePhone, sanitizeText } from "@/lib/sanitize";
 import styles from "./AuthPage.module.css";
 
 const initialPhone = "";
-
-function isPhoneValid(value) {
-  return value.replace(/\D/g, "").length >= 11;
-}
 
 function PasswordField({
   value,
@@ -107,9 +104,13 @@ export default function AuthPage({ initialTab = "login" }) {
       return;
     }
 
+    if (!isValidKazakhstanPhone(phone)) {
+      setError("Введите корректный номер телефона");
+      return;
+    }
+
     try {
-      console.log({ phone, password });
-      // await login({ phone, password });
+      // await login({ phone: normalizePhone(phone), password });
       setSuccess("Вход выполнен успешно");
       setError("");
     } catch (error) {
@@ -121,8 +122,17 @@ export default function AuthPage({ initialTab = "login" }) {
   async function handleRegister(e) {
     e.preventDefault();
 
-    if (!name || !registerPhone || !registerPassword || !confirmPassword) {
+    const safeName = sanitizeText(name, 80);
+    const safePhone = normalizePhone(registerPhone);
+
+    if (!safeName || !safePhone || !registerPassword || !confirmPassword) {
       setError("Заполните все поля");
+      setSuccess("");
+      return;
+    }
+
+    if (!isValidKazakhstanPhone(safePhone)) {
+      setError("Введите корректный номер телефона");
       setSuccess("");
       return;
     }
@@ -140,8 +150,7 @@ export default function AuthPage({ initialTab = "login" }) {
     }
 
     try {
-      console.log({ name, phone: registerPhone, password: registerPassword });
-      // await register({ name, phone, password });
+      // await register({ name: safeName, phone: safePhone, password: registerPassword });
       setSuccess("Регистрация успешно завершена");
       setError("");
     } catch (error) {
@@ -153,12 +162,14 @@ export default function AuthPage({ initialTab = "login" }) {
   function handleSendCode(e) {
     e.preventDefault();
 
-    if (!phoneOnly || !isPhoneValid(phoneOnly)) {
+    const safePhone = normalizePhone(phoneOnly);
+
+    if (!phoneOnly || !isValidKazakhstanPhone(safePhone)) {
       showError("Введите корректный номер телефона");
       return;
     }
 
-    console.log({ phone: phoneOnly });
+    setPhoneOnly(safePhone);
     setOtpStep(true);
     flashSuccess("Код отправлен");
   }
@@ -171,7 +182,6 @@ export default function AuthPage({ initialTab = "login" }) {
       return;
     }
 
-    console.log({ phone: phoneOnly, otp });
     flashSuccess("Вы успешно вошли");
   }
 
@@ -249,7 +259,7 @@ export default function AuthPage({ initialTab = "login" }) {
                       className={styles.input}
                       type="tel"
                       value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
+                      onChange={(e) => setPhone(sanitizeText(e.target.value, 24))}
                       placeholder="+7 (___) ___-__-__"
                       aria-label="Телефон"
                       data-testid="login-phone"
@@ -315,8 +325,8 @@ export default function AuthPage({ initialTab = "login" }) {
                       <input
                         className={styles.input}
                         type="tel"
-                        value={phoneOnly}
-                        onChange={(e) => setPhoneOnly(e.target.value)}
+                      value={phoneOnly}
+                        onChange={(e) => setPhoneOnly(sanitizeText(e.target.value, 24))}
                         placeholder="+7 (___) ___-__-__"
                         aria-label="Телефон для входа по коду"
                         data-testid="phone-login-phone"
@@ -389,7 +399,7 @@ export default function AuthPage({ initialTab = "login" }) {
                       className={styles.input}
                       type="text"
                       value={name}
-                      onChange={(e) => setName(e.target.value)}
+                      onChange={(e) => setName(sanitizeText(e.target.value, 80))}
                       placeholder="Ваше имя"
                       aria-label="Имя"
                       data-testid="register-name"
@@ -403,7 +413,7 @@ export default function AuthPage({ initialTab = "login" }) {
                       className={styles.input}
                       type="tel"
                       value={registerPhone}
-                      onChange={(e) => setRegisterPhone(e.target.value)}
+                      onChange={(e) => setRegisterPhone(sanitizeText(e.target.value, 24))}
                       placeholder="+7 (___) ___-__-__"
                       aria-label="Телефон"
                       data-testid="register-phone"

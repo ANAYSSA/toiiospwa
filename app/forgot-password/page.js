@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import { sendPasswordResetEmail } from "firebase/auth";
 import { useToast, ToastProvider } from "@/components/Toast";
+import { isValidEmail, normalizeEmail } from "@/lib/sanitize";
 
 function ForgotInner() {
   const router = useRouter();
@@ -14,13 +15,18 @@ function ForgotInner() {
 
   const handleSend = async (e) => {
     e.preventDefault();
-    if (!email.trim()) {
+    const safeEmail = normalizeEmail(email);
+    if (!safeEmail) {
       showToast("Введите ваш Email");
+      return;
+    }
+    if (!isValidEmail(safeEmail)) {
+      showToast("Invalid email");
       return;
     }
     setLoading(true);
     try {
-      await sendPasswordResetEmail(auth, email.trim());
+      await sendPasswordResetEmail(auth, safeEmail);
       setSent(true);
       showToast("Инструкции отправлены! Проверьте почту и Спам.");
     } catch (err) {
@@ -103,7 +109,7 @@ function ForgotInner() {
               placeholder="Введите ваш Email"
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => setEmail(e.target.value.slice(0, 254))}
               autoCapitalize="none"
               autoComplete="email"
             />
