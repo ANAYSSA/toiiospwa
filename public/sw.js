@@ -4,6 +4,7 @@ const PRECACHE = ["/", "/manifest.json"];
 const isPrivatePath = (url) =>
   url.pathname.startsWith("/menu") ||
   url.pathname.startsWith("/admin") ||
+  url.pathname.startsWith("/vendor") ||
   url.pathname.startsWith("/profile") ||
   url.pathname.startsWith("/booking");
 

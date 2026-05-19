@@ -1,184 +1,79 @@
-# toi.kz — PWA
+# toi.kz / toiiospwa
 
-PWA-версия твоего Android-приложения для бронирования залов и услуг для тоев в Казахстане.
-Сделано на **Next.js 14 (App Router) + Firebase Web SDK**.
+Premium PWA для организации мероприятий в Казахстане на Next.js App Router, React 18 и Firebase Web SDK.
 
-Полностью повторяет весь функционал Android-версии:
+Проект теперь включает три рабочих кабинета:
 
-- 🔐 **Login** (Email/Password) — `MainActivity`
-- ✍️ **Register** (Name, Surname, Email, Phone, Password) — `CreatingAccount`
-- 🔄 **Forgot Password** (через Firebase) — `ForgotPassword`
-- 🏠 **Меню с нижней навигацией** (Home / Halls / Booking / Profile) — `Menu`
-- 📝 **Booking** (выбор города, типа события, даты, услуг) — `BookingFragment`
-- 🏛️ **Halls** (карточки залов и услуг по фильтрам) — `HallsFragment`
-- 👤 **Profile** (тёмная тема, выбор города, выход) — `ProfileFragment`
+- Client app: `/menu/home`, `/menu/halls`, `/menu/plan`, `/menu/booking`, `/menu/profile`
+- Vendor cabinet: `/vendor`, `/vendor/orders`, `/vendor/profile`, `/vendor/services`, `/vendor/calendar`, `/vendor/reviews`, `/vendor/messages`, `/vendor/settings`
+- Admin panel: `/admin`, `/admin/users`, `/admin/vendors`, `/admin/services`, `/admin/bookings`, `/admin/categories`, `/admin/cities`, `/admin/messages`, `/admin/reviews`, `/admin/complaints`, `/admin/content`, `/admin/analytics`, `/admin/settings`
 
-Тот же тёмно-золотой дизайн (#0A0A0A / #A87935 / #800020), та же логика, тот же Firebase-проект.
+UI построен в едином dark premium стиле: soft gold accents, clean cards, responsive bottom navigation, desktop sidebar, modal/toast states и mobile safe-area.
 
----
-
-## 🚀 Быстрый старт
-
-### 1. Локально запустить
+## Quick Start
 
 ```bash
 npm install
 npm run dev
 ```
 
-Открой http://localhost:3000
+Откройте `http://localhost:3000`.
 
-### 2. Деплой на Vercel
-
-#### Вариант А: через GitHub (рекомендуется)
-
-1. Создай новый репозиторий на GitHub
-2. Залей этот проект:
-   ```bash
-   git init
-   git add .
-   git commit -m "ToiKz PWA"
-   git branch -M main
-   git remote add origin https://github.com/ТВОЙ_USERNAME/toikz-pwa.git
-   git push -u origin main
-   ```
-3. Зайди на https://vercel.com → **New Project** → Import репозиторий
-4. Просто нажми **Deploy** (Vercel сам определит Next.js, ничего настраивать не надо)
-5. Через ~1 минуту получишь ссылку вида `https://toikz-pwa.vercel.app`
-
-#### Вариант Б: через Vercel CLI
+Для production build:
 
 ```bash
-npm i -g vercel
-vercel
-# следуй инструкциям, выбирай defaults
+npm run build
+npm start
 ```
 
----
+## Auth And Roles
 
-## ⚠️ ВАЖНО: настройка Firebase для веба
+MVP UI поддерживает role-based session для трех ролей:
 
-Твой `google-services.json` — для Android. Чтобы Firebase работал на вебе, нужно:
+- `client`: организация тоя, каталог, план, брони, профиль
+- `vendor`: заявки, профиль услуги, сервисы, календарь, отзывы, сообщения
+- `admin`: пользователи, vendors, сервисы, брони, категории, города, контент, жалобы, аналитика
 
-### 1. Создать Web App в Firebase Console
+Важно: frontend role используется только для UX и маршрутизации. Production security должна быть реализована через Firebase Auth, custom claims или `admins/{uid}: true`, Realtime Database Rules и Storage Rules.
 
-1. Зайди в https://console.firebase.google.com → выбери свой Firebase проект
-2. ⚙️ Project Settings → вкладка **General**
-3. Скролл вниз до **Your apps** → нажми **Add app** → **Web (</>)**
-4. Введи название "ToiKz Web" → Register app
-5. Скопируй блок `firebaseConfig` — там будет нужный `appId` (формат `1:your_sender_id:web:...`)
+Admin login route: `/admin/login`.
 
-### 2. Добавить домен в Authorized
+## Product Features
 
-Authentication → Settings → **Authorized domains** → Add domain →
-введи свой Vercel-домен (например `toikz-pwa.vercel.app`).
-Без этого Login не будет работать на сайте.
+Client MVP:
 
-### 3. Включить нужные провайдеры
+- Dashboard with event status, days left, progress and quick actions
+- Catalog with search, category/city filters, verified toggle, sort and vendor cards
+- Hall/vendor detail modal, WhatsApp/phone links, compare action
+- Booking request flow with status tracking
+- Plan section: guests, invitations/RSVP link, budget, checklist, seating planner, timeline
+- Profile, notifications, logout
 
-Authentication → **Sign-in method** → включи **Email/Password** (если ещё не включён).
+Vendor MVP:
 
-### 4. (Опционально) Поставить env-переменные на Vercel
+- Dashboard metrics
+- Accept/decline/suggest/update booking statuses
+- Business profile editor
+- Services create/publish/unpublish
+- Busy date calendar
+- Reviews/messages/settings screens
 
-Если хочешь не хардкодить ключи в `lib/firebase.js`:
+Admin MVP:
 
-1. Vercel Dashboard → твой проект → **Settings** → **Environment Variables**
-2. Добавь все переменные из `.env.example` (с твоим реальным `NEXT_PUBLIC_FIREBASE_APP_ID` для веба)
-3. Redeploy
+- Metrics dashboard
+- Users list, block/unblock, role change UI
+- Vendor approve/reject/verify/feature
+- Service publish/hide
+- Booking status moderation
+- Categories/cities active toggle
+- Messages read state, review moderation, complaints resolution
+- Content/settings editor
 
-По умолчанию проект работает с конфигом, зашитым в `lib/firebase.js` — но `appId` там ставочный. **Обязательно поменяй его** на тот, что выдаст Firebase для Web App.
+Data for MVP is persisted in browser localStorage through `lib/appStore.js`. It is structured to match the Firebase production model.
 
----
+## Environment Variables
 
-## 📱 Установка как PWA на iOS
-
-После деплоя на Vercel:
-
-1. Открой URL в **Safari** (важно — именно Safari, не Chrome)
-2. Нажми кнопку **«Поделиться»** (квадрат со стрелкой вверх)
-3. Прокрути вниз → **«На экран Домой»**
-4. Нажми **«Добавить»**
-
-Иконка toi.kz появится на рабочем столе. При запуске приложение откроется в полноэкранном режиме без браузерных панелей, как настоящее нативное приложение.
-
-## 📱 Установка как PWA на Android
-
-1. Открой URL в **Chrome**
-2. В меню браузера выбери **«Установить приложение»** (или появится баннер)
-3. Подтверди установку
-
----
-
-## 📂 Структура проекта
-
-```
-toikz-pwa/
-├── app/
-│   ├── layout.js            ← root layout + PWA meta
-│   ├── page.js              ← / Login (MainActivity)
-│   ├── globals.css          ← вся стилистика + safe-area
-│   ├── register/page.js     ← /register (CreatingAccount)
-│   ├── forgot-password/page.js ← /forgot-password
-│   └── menu/
-│       ├── layout.js        ← bottom nav, auth guard
-│       ├── home/page.js     ← Главная
-│       ├── halls/
-│       │   ├── page.js      ← список залов
-│       │   └── results/page.js ← результаты поиска (HallsFragment)
-│       ├── booking/page.js  ← BookingFragment
-│       └── profile/page.js  ← ProfileFragment
-├── components/
-│   └── Toast.js             ← замена Toast.makeText
-├── lib/
-│   └── firebase.js          ← Firebase Web SDK
-├── public/
-│   ├── manifest.json        ← PWA manifest
-│   ├── sw.js                ← service worker (offline)
-│   └── icons/               ← все размеры иконок (твой логотип)
-├── package.json
-├── next.config.js
-├── tailwind.config.js
-├── postcss.config.js
-├── vercel.json
-└── .env.example
-```
-
----
-
-## 🎨 Соответствие Android-версии
-
-| Android Activity / Fragment   | PWA Route                    |
-| ----------------------------- | ---------------------------- |
-| `MainActivity`                | `/`                          |
-| `CreatingAccount`             | `/register`                  |
-| `ForgotPassword`              | `/forgot-password`           |
-| `Menu`                        | `/menu/*`                    |
-| `HomeFragment`                | `/menu/home`                 |
-| `HallsFragment` (список)      | `/menu/halls`                |
-| `HallsFragment` (результаты)  | `/menu/halls/results?...`    |
-| `BookingFragment`             | `/menu/booking`              |
-| `ProfileFragment`             | `/menu/profile`              |
-
----
-
-## 🛠 Стек
-
-- **Next.js 14** (App Router)
-- **React 18**
-- **Firebase Web SDK** (Auth + Realtime Database)
-- **Tailwind CSS** (для базы)
-- **Service Worker** (offline + установка)
-- **iOS safe-area** (`env(safe-area-inset-*)`) — учтены вырезы и нижняя полоса iPhone
-
----
-
-Готово! Если что-то не сработает — пиши.
-
----
-
-## Environment variables
-
-Create `.env.local` locally from `.env.example` and fill it with the Firebase Web App config from Firebase Console.
+Create `.env.local` locally from `.env.example` and fill it with Firebase Web App config from Firebase Console.
 
 Required variables:
 
@@ -192,40 +87,100 @@ NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
 NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
 ```
 
-Do not commit `.env.local`, `.env.production`, service account JSON files, private keys, or Firebase Admin SDK credentials. `NEXT_PUBLIC_FIREBASE_*` values are visible in the browser by design; Firebase security must be enforced with Firebase Auth, Realtime Database Rules, Storage Rules, Vercel env variables, and restricted Google Cloud API keys.
+Do not commit `.env.local`, `.env.production`, service account JSON files, private keys, or Firebase Admin SDK credentials.
+
+`NEXT_PUBLIC_FIREBASE_*` values are visible in the browser by design. Real protection is:
+
+- Firebase Auth
+- Firebase Realtime Database Rules
+- Firebase Storage Rules
+- Vercel env variables
+- Google Cloud API key restrictions
+- No secrets in GitHub
+- Service worker does not cache private data
 
 If real Firebase keys were ever committed to GitHub history, deleting them from files is not enough. Rotate or restrict the exposed Firebase API key in Google Cloud Console, update Vercel env variables, and redeploy.
 
-## Firebase rules
+## Firebase Rules
 
 Realtime Database rules are stored in `database.rules.json`.
 
-Publish them manually:
+Publish manually:
 
-1. Open Firebase Console.
-2. Go to Realtime Database -> Rules.
-3. Paste the contents of `database.rules.json`.
-4. Click Publish.
+1. Firebase Console
+2. Realtime Database
+3. Rules
+4. Paste `database.rules.json`
+5. Publish
 
-Storage rules are stored in `storage.rules`. Publish them before enabling user uploads. Avatar uploads are currently compressed client-side and limited to 1MB; production should move avatars fully to Firebase Storage.
+Storage rules are stored in `storage.rules`. Publish them before enabling production uploads.
 
-Admin access is enforced in Realtime Database rules through:
+Admin access is enforced through:
 
 ```text
 admins/$uid === true
 ```
 
-Frontend role helpers are only for UI decisions. They are not a security boundary.
-
-## Vercel setup
+## Vercel Setup
 
 1. Open Vercel Project Settings -> Environment Variables.
-2. Add every required `NEXT_PUBLIC_FIREBASE_*` variable listed above.
+2. Add every required `NEXT_PUBLIC_FIREBASE_*` variable.
 3. Open Firebase Console -> Authentication -> Settings -> Authorized domains.
-4. Add:
-   - `localhost`
-   - your Vercel preview domain
-   - your production domain
-5. Redeploy the project.
+4. Add `localhost`, Vercel preview domain and production domain.
+5. Redeploy project.
 
-Do not upload `.env.local` to GitHub or Vercel source control.
+Do not upload `.env.local` to GitHub.
+
+## Security
+
+Security hardening includes:
+
+- No hardcoded Firebase fallback keys in `lib/firebase.js`
+- Strict required env validation
+- Security headers and Firebase-compatible CSP in `next.config.js`
+- Private route protection through `hooks/useRequireAuth.js`
+- Service worker network-only behavior for `/menu`, `/vendor`, `/admin`, Firebase requests, non-GET requests and authorized requests
+- Input sanitization helpers in `lib/sanitize.js`
+- Realtime Database rules for users, events, vendors, services, bookings, plan data, invitations, notifications and messages
+- `SECURITY.md` and `docs/SECURITY_CHECKLIST.md`
+
+Run checks:
+
+```bash
+npm install
+npm run build
+npm audit
+```
+
+## Project Structure
+
+```text
+app/
+  page.js
+  register/page.js
+  admin/
+  invite/[eventId]/
+  menu/
+  vendor/
+components/
+  AppShell.js
+  AuthPage.js
+  PlatformPages.js
+lib/
+  appData.js
+  appStore.js
+  firebase.js
+  roles.js
+  sanitize.js
+  session.js
+hooks/
+  useRequireAuth.js
+public/
+  images/toi-login-bg.png
+  manifest.json
+  sw.js
+database.rules.json
+storage.rules
+SECURITY.md
+docs/SECURITY_CHECKLIST.md
+```
