@@ -55,11 +55,16 @@ function PasswordField({ value, onChange, placeholder, ariaLabel, visible, onTog
 
 function firebaseErrorMessage(error) {
   const code = error?.code || "";
+  if (code === "auth/operation-not-allowed") return "Email/password вход не включен в Firebase Authentication";
+  if (code === "auth/configuration-not-found") return "Firebase Authentication не настроен для этого проекта";
+  if (code === "auth/invalid-email") return "Введите корректный email";
+  if (code === "auth/weak-password") return "Пароль слишком слабый. Минимум 6 символов";
   if (code === "auth/invalid-credential" || code === "auth/wrong-password") return "Неверный email или пароль";
   if (code === "auth/user-not-found") return "Пользователь не найден";
   if (code === "auth/email-already-in-use") return "Этот email уже зарегистрирован";
   if (code === "auth/too-many-requests") return "Слишком много попыток. Попробуйте позже";
   if (code === "auth/network-request-failed") return "Проверьте интернет соединение";
+  if (code === "PERMISSION_DENIED" || /permission/i.test(error?.message || "")) return "Аккаунт создан, но база данных отклонила запись профиля. Обновите Firebase Database Rules";
   return "Ошибка авторизации";
 }
 
@@ -129,8 +134,8 @@ export default function AuthPage({ initialTab = "login" }) {
   }
 
   async function getUserProfile(uid) {
-    const snap = await get(ref(db, `Users/${uid}`));
-    return snap.exists() ? snap.val() : null;
+    const snap = await get(ref(db, `Users/${uid}`)).catch(() => null);
+    return snap?.exists() ? snap.val() : null;
   }
 
   async function handleLogin(e) {
@@ -267,8 +272,8 @@ export default function AuthPage({ initialTab = "login" }) {
         createdAt: Date.now(),
       };
 
-      await set(ref(db, `Users/${credential.user.uid}`), profile);
-      await writePhoneLoginIndex({ phone: safePhone, email: safeEmail, uid: credential.user.uid });
+      const profileWrite = await set(ref(db, `Users/${credential.user.uid}`), profile).then(() => true).catch(() => false);
+      await writePhoneLoginIndex({ phone: safePhone, email: safeEmail, uid: credential.user.uid }).catch(() => {});
 
       const user = makeSessionUser({
         role: accountType,
@@ -313,6 +318,10 @@ export default function AuthPage({ initialTab = "login" }) {
             ...current.vendors.filter((vendor) => vendor.ownerId !== credential.user.uid),
           ],
         }));
+      }
+
+      if (!profileWrite) {
+        setSuccess("Аккаунт создан. Профиль сохранится после обновления Firebase Database Rules.");
       }
 
       finishAuth(user, accountType === "vendor" ? "/vendor" : "/menu/home");
