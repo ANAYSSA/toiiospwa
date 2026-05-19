@@ -497,23 +497,26 @@ export default function AuthPage({ initialTab = "login" }) {
                     <Phone className={styles.fieldIcon} size={20} aria-hidden="true" />
                     <input className={styles.input} type="tel" value={registerPhone} onChange={(e) => setRegisterPhone(sanitizeText(e.target.value, 24))} placeholder="+7 (___) ___-__-__" aria-label="Телефон" autoComplete="tel" />
                   </div>
-                  <div className={styles.gridFields}>
+                  {accountType === "client" ? (
                     <div className={styles.fieldWrap}>
                       <MapPin className={styles.fieldIcon} size={19} aria-hidden="true" />
                       <select className={styles.input} value={city} onChange={(e) => setCity(e.target.value)} aria-label="Город">
                         {KZ_CITIES.map((item) => <option key={item} value={item}>{item}</option>)}
                       </select>
                     </div>
-                    {accountType === "client" ? (
-                      <select className={`${styles.input} ${styles.inputPlain}`} value={eventType} onChange={(e) => setEventType(e.target.value)} aria-label="Тип мероприятия">
-                        {EVENT_TYPES.map((item) => <option key={item} value={item}>{item}</option>)}
-                      </select>
-                    ) : (
+                  ) : (
+                    <div className={styles.gridFields}>
+                      <div className={styles.fieldWrap}>
+                        <MapPin className={styles.fieldIcon} size={19} aria-hidden="true" />
+                        <select className={styles.input} value={city} onChange={(e) => setCity(e.target.value)} aria-label="Город">
+                          {KZ_CITIES.map((item) => <option key={item} value={item}>{item}</option>)}
+                        </select>
+                      </div>
                       <select className={`${styles.input} ${styles.inputPlain}`} value={vendorCategory} onChange={(e) => setVendorCategory(e.target.value)} aria-label="Категория услуги">
                         {CATEGORIES.map((item) => <option key={item.id} value={item.name}>{item.name}</option>)}
                       </select>
-                    )}
-                  </div>
+                    </div>
+                  )}
                   {accountType === "vendor" ? (
                     <>
                       <div className={styles.fieldWrap}>

@@ -444,27 +444,61 @@ export function CatalogPage() {
 
       {selected ? (
         <Modal title={selected.businessName} onClose={() => setSelected(null)} wide>
-          <div className="grid-2">
-            <img src={selected.image} alt={selected.businessName} style={{ borderRadius: 20, width: "100%", height: "100%", minHeight: 300, objectFit: "cover" }} />
-            <div className="page-stack">
-              <div>
-                <StatusPill status="approved">{selected.category} · {selected.city}</StatusPill>
-                <h2 style={{ margin: "12px 0 8px" }}>{selected.businessName}</h2>
-                <p className="muted" style={{ lineHeight: 1.6 }}>{selected.description}</p>
+          <div className="page-stack" style={{ gap: 24 }}>
+            <div className="grid-2">
+              <img src={selected.image} alt={selected.businessName} style={{ borderRadius: 20, width: "100%", height: "100%", minHeight: 300, objectFit: "cover" }} />
+              <div className="page-stack">
+                <div>
+                  <StatusPill status="approved">{selected.category} · {selected.city}</StatusPill>
+                  <h2 style={{ margin: "12px 0 8px" }}>{selected.businessName}</h2>
+                  <p className="muted" style={{ lineHeight: 1.6 }}>{selected.description}</p>
+                </div>
+                <div className="grid-2">
+                  <StatCard icon={Users} label="Вместимость" value={selected.capacity ? `${selected.capacity}` : "под запрос"} />
+                  <StatCard icon={Wallet} label="Цена от" value={formatMoney(selected.priceFrom)} />
+                </div>
+                <div className="scroll-row">{(selected.features || []).map((feature) => <span className="chip" key={feature}>{feature}</span>)}</div>
+                <div className="premium-card premium-card-inner" style={{ background: "rgba(255,255,255,0.035)" }}>
+                  <strong>Свободные даты</strong>
+                  <div className="scroll-row" style={{ marginTop: 10 }}>{(selected.availableDates || []).map((date) => <span className="chip" key={date}>{date}</span>)}</div>
+                </div>
+                <div className="grid-2">
+                  <button className="premium-button" type="button" onClick={() => { setSelected(null); openBooking(selected); }}>Проверить дату</button>
+                  <a className="secondary-button" href={`tel:${selected.phone}`}><Phone size={16} /> Позвонить</a>
+                </div>
               </div>
-              <div className="grid-2">
-                <StatCard icon={Users} label="Вместимость" value={selected.capacity ? `${selected.capacity}` : "под запрос"} />
-                <StatCard icon={Wallet} label="Цена от" value={formatMoney(selected.priceFrom)} />
+            </div>
+
+            <div className="premium-card premium-card-inner" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 16 }}>
+              <div className="list-row" style={{ marginBottom: 16 }}>
+                <h3 style={{ margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
+                  <Star size={20} fill="#f0d391" stroke="#f0d391" /> Отзывы с 2GIS
+                </h3>
+                {selected.url2gis ? (
+                  <a className="secondary-button" href={selected.url2gis} target="_blank" rel="noreferrer" style={{ fontSize: 13, padding: "6px 12px" }}>
+                    Читать в 2GIS
+                  </a>
+                ) : null}
               </div>
-              <div className="scroll-row">{(selected.features || []).map((feature) => <span className="chip" key={feature}>{feature}</span>)}</div>
-              <div className="premium-card premium-card-inner" style={{ background: "rgba(255,255,255,0.035)" }}>
-                <strong>Свободные даты</strong>
-                <div className="scroll-row" style={{ marginTop: 10 }}>{(selected.availableDates || []).map((date) => <span className="chip" key={date}>{date}</span>)}</div>
-              </div>
-              <div className="grid-2">
-                <button className="premium-button" type="button" onClick={() => { setSelected(null); openBooking(selected); }}>Проверить дату</button>
-                <a className="secondary-button" href={`tel:${selected.phone}`}><Phone size={16} /> Позвонить</a>
-              </div>
+              
+              {selected.reviews && selected.reviews.length > 0 ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {selected.reviews.map((rev, idx) => (
+                    <div key={idx} style={{ padding: 12, background: "rgba(255,255,255,0.02)", borderRadius: 12, border: "1px solid rgba(255,255,255,0.03)" }}>
+                      <div className="list-row" style={{ marginBottom: 6 }}>
+                        <strong style={{ color: "white" }}>{rev.user}</strong>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ color: "#f0d391", fontSize: 13 }}>{"★".repeat(rev.rating)}</span>
+                          <span className="muted" style={{ fontSize: 12 }}>{rev.date}</span>
+                        </div>
+                      </div>
+                      <p className="muted" style={{ margin: 0, fontSize: 14, lineHeight: 1.5 }}>{rev.text}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="muted" style={{ margin: 0, fontSize: 14 }}>Отзывов пока нет.</p>
+              )}
             </div>
           </div>
         </Modal>

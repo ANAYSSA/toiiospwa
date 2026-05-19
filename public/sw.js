@@ -40,6 +40,10 @@ self.addEventListener("fetch", (event) => {
   const request = event.request;
   const url = new URL(request.url);
 
+  if (url.hostname.includes("kaspersky-labs.com")) {
+    return;
+  }
+
   if (
     request.method !== "GET" ||
     hasAuthorization(request) ||
