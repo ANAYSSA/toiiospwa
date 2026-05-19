@@ -2,11 +2,14 @@
 
 import { BOOKING_STATUSES, CATEGORIES, EVENT_TYPES, KZ_CITIES } from "@/lib/appData";
 import { useAppStore } from "@/lib/appStore";
-import { clearSession, getSession, updateSession } from "@/lib/session";
-import { isValidKazakhstanPhone, normalizePhone, sanitizeText } from "@/lib/sanitize";
+import { clearSession, getSession, setSession, updateSession } from "@/lib/session";
+import { isValidEmail, isValidKazakhstanPhone, normalizeEmail, normalizePhone, sanitizeText } from "@/lib/sanitize";
 import { useToast } from "@/components/Toast";
-import { auth } from "@/lib/firebase";
-import { signOut } from "firebase/auth";
+import { auth, db } from "@/lib/firebase";
+import { findEmailByPhone, writePhoneLoginIndex } from "@/lib/authLookups";
+import { isAdmin } from "@/lib/roles";
+import { get, ref } from "firebase/database";
+import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 import {
   AlertTriangle,
   BarChart3,
@@ -991,21 +994,82 @@ export function VendorSection({ section = "dashboard" }) {
 
 export function AdminLoginPage() {
   const router = useRouter();
-  const [phone, setPhone] = useState("");
+  const [loginId, setLoginId] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  function login(e) {
+  async function login(e) {
     e.preventDefault();
-    if (!isValidKazakhstanPhone(phone) || password.length < 6) {
-      setError("Введите телефон администратора и пароль");
+    setSubmitting(true);
+    setError("");
+
+    const safeLoginId = sanitizeText(loginId, 254);
+    if (!safeLoginId || password.length < 6) {
+      setSubmitting(false);
+      setError("Введите email/телефон администратора и пароль");
       return;
     }
-    const user = { uid: "admin_demo", role: "admin", name: "Admin toi.kz", phone: normalizePhone(phone), city: "Алматы", status: "active", createdAt: new Date().toISOString() };
-    import("@/lib/session").then(({ setSession }) => {
+
+    try {
+      let loginEmail = "";
+      if (safeLoginId.includes("@")) {
+        loginEmail = normalizeEmail(safeLoginId);
+        if (!isValidEmail(loginEmail)) {
+          setSubmitting(false);
+          setError("Введите корректный email администратора");
+          return;
+        }
+      } else {
+        const safePhone = normalizePhone(safeLoginId);
+        if (!isValidKazakhstanPhone(safePhone)) {
+          setSubmitting(false);
+          setError("Введите корректный телефон администратора");
+          return;
+        }
+
+        loginEmail = await findEmailByPhone(safePhone);
+        if (!loginEmail) {
+          setSubmitting(false);
+          setError("Неверный логин или пароль");
+          return;
+        }
+      }
+
+      const credential = await signInWithEmailAndPassword(auth, loginEmail, password);
+      const allowed = await isAdmin(credential.user.uid);
+      if (!allowed) {
+        await signOut(auth).catch(() => {});
+        clearSession();
+        setSubmitting(false);
+        setError("Нет доступа к admin panel");
+        return;
+      }
+
+      const profileSnap = await get(ref(db, `Users/${credential.user.uid}`)).catch(() => null);
+      const profile = profileSnap?.exists() ? profileSnap.val() : {};
+      const profilePhone = profile?.phoneNumber || profile?.phone || credential.user.phoneNumber || "";
+      if (profilePhone) {
+        await writePhoneLoginIndex({ phone: profilePhone, email: credential.user.email || loginEmail, uid: credential.user.uid }).catch(() => {});
+      }
+
+      const user = {
+        uid: credential.user.uid,
+        role: "admin",
+        name: profile?.name || credential.user.displayName || "Admin toi.kz",
+        phone: profilePhone,
+        email: credential.user.email || loginEmail,
+        emailVerified: credential.user.emailVerified,
+        city: profile?.city || "Алматы",
+        status: "active",
+        createdAt: profile?.createdAt || new Date().toISOString(),
+      };
       setSession(user);
       router.replace("/admin");
-    });
+    } catch {
+      setSubmitting(false);
+      setError("Неверный логин или пароль");
+    }
   }
 
   return (
@@ -1013,10 +1077,10 @@ export function AdminLoginPage() {
       <section className="premium-card premium-card-inner" style={{ width: "min(460px, 94vw)" }}>
         <div className="app-brand" style={{ marginBottom: 20 }}><img className="app-brand-logo" src="/images/toi-logo.png" alt="toi.kz" /><span><strong>TOI.KZ</strong><small>Admin secure entry</small></span></div>
         <form className="page-stack" onSubmit={login}>
-          <input className="premium-input" value={phone} onChange={(e) => setPhone(sanitizeText(e.target.value, 24))} placeholder="+7..." aria-label="Admin phone" />
+          <input className="premium-input" value={loginId} onChange={(e) => setLoginId(sanitizeText(e.target.value, 254))} placeholder="Email или +7..." aria-label="Admin email or phone" autoComplete="username" />
           <input className="premium-input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Пароль" aria-label="Admin password" />
           {error ? <div className="status-pill danger">{error}</div> : null}
-          <button className="premium-button" type="submit">Войти в admin panel</button>
+          <button className="premium-button" type="submit" disabled={submitting}>{submitting ? "Проверяем..." : "Войти в admin panel"}</button>
         </form>
       </section>
     </main>

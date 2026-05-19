@@ -19,13 +19,15 @@ import {
 } from "lucide-react";
 import {
   createUserWithEmailAndPassword,
+  sendEmailVerification,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   updateProfile,
 } from "firebase/auth";
-import { equalTo, get, orderByChild, query, ref, set } from "firebase/database";
+import { get, ref, set } from "firebase/database";
 import { CATEGORIES, EVENT_TYPES, KZ_CITIES } from "@/lib/appData";
 import { useAppStore } from "@/lib/appStore";
+import { findEmailByPhone, writePhoneLoginIndex } from "@/lib/authLookups";
 import { auth, db } from "@/lib/firebase";
 import { isValidEmail, isValidKazakhstanPhone, normalizeEmail, normalizePhone, sanitizeText } from "@/lib/sanitize";
 import { makeSessionUser, ROLE_ROUTES, setSession } from "@/lib/session";
@@ -131,30 +133,6 @@ export default function AuthPage({ initialTab = "login" }) {
     return snap.exists() ? snap.val() : null;
   }
 
-  async function findEmailByPhone(phoneValue) {
-    const normalized = normalizePhone(phoneValue);
-
-    try {
-      const normalizedQuery = query(ref(db, "Users"), orderByChild("phoneNumberNormalized"), equalTo(normalized));
-      const snap = await get(normalizedQuery);
-      if (snap.exists()) {
-        const first = Object.values(snap.val())[0];
-        if (first?.email) return normalizeEmail(first.email);
-      }
-
-      const phoneQuery = query(ref(db, "Users"), orderByChild("phoneNumber"), equalTo(normalized));
-      const phoneSnap = await get(phoneQuery);
-      if (phoneSnap.exists()) {
-        const first = Object.values(phoneSnap.val())[0];
-        if (first?.email) return normalizeEmail(first.email);
-      }
-    } catch {
-      return null;
-    }
-
-    return null;
-  }
-
   async function handleLogin(e) {
     e.preventDefault();
     setSubmitting(true);
@@ -196,12 +174,17 @@ export default function AuthPage({ initialTab = "login" }) {
       const credential = await signInWithEmailAndPassword(auth, loginEmail, password);
       const profile = await getUserProfile(credential.user.uid);
       const role = profile?.role || accountType || "client";
+      const profilePhone = profile?.phoneNumber || profile?.phone || credential.user.phoneNumber || "";
+      if (profilePhone) {
+        await writePhoneLoginIndex({ phone: profilePhone, email: credential.user.email || loginEmail, uid: credential.user.uid }).catch(() => {});
+      }
       const user = {
         uid: credential.user.uid,
         role,
         name: profile?.name || credential.user.displayName || "toi.kz user",
-        phone: profile?.phoneNumber || profile?.phone || credential.user.phoneNumber || "",
+        phone: profilePhone,
         email: credential.user.email || loginEmail,
+        emailVerified: credential.user.emailVerified,
         city: profile?.city || city,
         businessName: profile?.businessName || "",
         status: profile?.status || "active",
@@ -264,11 +247,13 @@ export default function AuthPage({ initialTab = "login" }) {
     try {
       const credential = await createUserWithEmailAndPassword(auth, safeEmail, registerPassword);
       await updateProfile(credential.user, { displayName: safeName });
+      await sendEmailVerification(credential.user).catch(() => {});
 
       const profile = {
         uid: credential.user.uid,
         name: safeName,
         email: safeEmail,
+        phone: safePhone,
         phoneNumber: safePhone,
         phoneNumberNormalized: safePhone,
         role: accountType,
@@ -283,6 +268,7 @@ export default function AuthPage({ initialTab = "login" }) {
       };
 
       await set(ref(db, `Users/${credential.user.uid}`), profile);
+      await writePhoneLoginIndex({ phone: safePhone, email: safeEmail, uid: credential.user.uid });
 
       const user = makeSessionUser({
         role: accountType,
@@ -294,6 +280,7 @@ export default function AuthPage({ initialTab = "login" }) {
       });
       user.uid = credential.user.uid;
       user.email = safeEmail;
+      user.emailVerified = credential.user.emailVerified;
       user.createdAt = new Date(profile.createdAt).toISOString();
 
       if (accountType === "vendor") {
@@ -338,18 +325,59 @@ export default function AuthPage({ initialTab = "login" }) {
   function handlePhoneLoginStart() {
     setPhoneLoginMode(true);
     setError("");
-    setSuccess("Вход по номеру телефона скоро будет доступен. Сейчас используйте вход по email.");
+    setSuccess("");
   }
 
-  function handlePhoneSubmit(e) {
+  async function handlePhoneSubmit(e) {
     e.preventDefault();
+    setSubmitting(true);
+    resetMessages();
+
     const safePhone = normalizePhone(phoneOnly);
     if (!isValidKazakhstanPhone(safePhone)) {
+      setSubmitting(false);
       showError("Введите корректный номер телефона");
       return;
     }
-    setSuccess("Вход по номеру телефона скоро будет доступен. Сейчас используйте вход по email.");
-    setError("");
+
+    if (!password) {
+      setSubmitting(false);
+      showError("Введите пароль");
+      return;
+    }
+
+    try {
+      const loginEmail = await findEmailByPhone(safePhone);
+      if (!loginEmail) {
+        setSubmitting(false);
+        showError("Неверный телефон или пароль");
+        return;
+      }
+
+      const credential = await signInWithEmailAndPassword(auth, loginEmail, password);
+      const profile = await getUserProfile(credential.user.uid);
+      const role = profile?.role || "client";
+      const profilePhone = profile?.phoneNumber || profile?.phone || safePhone;
+      await writePhoneLoginIndex({ phone: profilePhone, email: credential.user.email || loginEmail, uid: credential.user.uid }).catch(() => {});
+
+      const user = {
+        uid: credential.user.uid,
+        role,
+        name: profile?.name || credential.user.displayName || "toi.kz user",
+        phone: profilePhone,
+        email: credential.user.email || loginEmail,
+        emailVerified: credential.user.emailVerified,
+        city: profile?.city || city,
+        businessName: profile?.businessName || "",
+        status: profile?.status || "active",
+        createdAt: profile?.createdAt || new Date().toISOString(),
+      };
+
+      finishAuth(user, role === "vendor" ? "/vendor" : role === "admin" ? "/admin" : "/menu/home");
+    } catch (phoneLoginError) {
+      setSubmitting(false);
+      setError(firebaseErrorMessage(phoneLoginError));
+    }
   }
 
   async function handleForgotPassword() {
@@ -461,15 +489,18 @@ export default function AuthPage({ initialTab = "login" }) {
               <div className={styles.formPanel} key="phone-login">
                 <div className={styles.formHeader}>
                   <h2>Вход по номеру телефона</h2>
-                  <p>Firebase Phone Auth пока не настроен. Используйте email/password.</p>
+                  <p>Введите номер, указанный при регистрации, и пароль от аккаунта.</p>
                 </div>
                 {message}
                 <form className={styles.form} onSubmit={handlePhoneSubmit}>
                   <div className={styles.fieldWrap}>
                     <Phone className={styles.fieldIcon} size={20} aria-hidden="true" />
-                    <input className={styles.input} type="tel" value={phoneOnly} onChange={(e) => setPhoneOnly(sanitizeText(e.target.value, 24))} placeholder="+7 (___) ___-__-__" aria-label="Телефон для входа по коду" autoComplete="tel" />
+                    <input className={styles.input} type="tel" value={phoneOnly} onChange={(e) => setPhoneOnly(sanitizeText(e.target.value, 24))} placeholder="+7 (___) ___-__-__" aria-label="Телефон для входа" autoComplete="tel" />
                   </div>
-                  <button className={styles.primaryButton} type="submit">Проверить номер</button>
+                  <PasswordField value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Пароль" ariaLabel="Пароль" visible={showLoginPassword} onToggle={() => setShowLoginPassword((value) => !value)} />
+                  <button className={styles.primaryButton} type="submit" disabled={submitting}>
+                    {submitting ? "Входим..." : "Войти по номеру"}
+                  </button>
                   <button className={styles.backButton} type="button" onClick={() => { setPhoneLoginMode(false); resetMessages(); }}>
                     Вернуться
                   </button>

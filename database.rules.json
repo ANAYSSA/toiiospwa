@@ -115,16 +115,25 @@
       ".write": "auth != null && root.child('admins').child(auth.uid).val() === true"
     },
 
+    "phoneLoginIndex": {
+      "$phoneKey": {
+        ".read": true,
+        ".write": "auth != null && newData.child('uid').val() === auth.uid",
+        ".validate": "$phoneKey.matches(/^7[0-9]{10}$/) && newData.hasChildren(['uid', 'email']) && newData.child('uid').isString() && newData.child('email').isString() && newData.child('email').val().length <= 254 && (!newData.child('updatedAt').exists() || newData.child('updatedAt').isNumber())"
+      }
+    },
+
     "Users": {
       ".indexOn": ["phoneNumber", "phoneNumberNormalized", "email"],
       "$uid": {
         ".read": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).val() === true)",
-        ".write": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).val() === true)"
+        ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || (auth.uid === $uid && newData.child('role').val() !== 'admin'))",
+        ".validate": "newData.hasChildren(['uid', 'role', 'email']) && newData.child('uid').val() === $uid && newData.child('role').val().matches(/^(client|vendor|admin)$/) && newData.child('email').isString() && newData.child('email').val().length <= 254 && (!newData.child('name').exists() || (newData.child('name').isString() && newData.child('name').val().length <= 80)) && (!newData.child('phone').exists() || (newData.child('phone').isString() && newData.child('phone').val().matches(/^\\+7[0-9]{10}$/))) && (!newData.child('phoneNumber').exists() || (newData.child('phoneNumber').isString() && newData.child('phoneNumber').val().matches(/^\\+7[0-9]{10}$/))) && (!newData.child('phoneNumberNormalized').exists() || (newData.child('phoneNumberNormalized').isString() && newData.child('phoneNumberNormalized').val().matches(/^\\+7[0-9]{10}$/))) && (!newData.child('city').exists() || (newData.child('city').isString() && newData.child('city').val().length <= 80))"
       }
     },
     "Halls": {
       ".read": true,
-      ".write": true
+      ".write": "auth != null && root.child('admins').child(auth.uid).val() === true"
     },
     "Bookings": {
       "$bookingId": {
