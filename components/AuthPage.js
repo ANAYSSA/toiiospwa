@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft,
   Briefcase,
   Building2,
   Calendar,
@@ -11,27 +10,28 @@ import {
   EyeOff,
   Heart,
   Lock,
+  Mail,
   MapPin,
   Phone,
   ShieldCheck,
   User,
   Users,
 } from "lucide-react";
+import {
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
+  signInWithEmailAndPassword,
+  updateProfile,
+} from "firebase/auth";
+import { equalTo, get, orderByChild, query, ref, set } from "firebase/database";
 import { CATEGORIES, EVENT_TYPES, KZ_CITIES } from "@/lib/appData";
 import { useAppStore } from "@/lib/appStore";
-import { isValidKazakhstanPhone, normalizePhone, sanitizeText } from "@/lib/sanitize";
+import { auth, db } from "@/lib/firebase";
+import { isValidEmail, isValidKazakhstanPhone, normalizeEmail, normalizePhone, sanitizeText } from "@/lib/sanitize";
 import { makeSessionUser, ROLE_ROUTES, setSession } from "@/lib/session";
 import styles from "./AuthPage.module.css";
 
-function PasswordField({
-  value,
-  onChange,
-  placeholder,
-  ariaLabel,
-  visible,
-  onToggle,
-  autoComplete = "current-password",
-}) {
+function PasswordField({ value, onChange, placeholder, ariaLabel, visible, onToggle, autoComplete = "current-password" }) {
   return (
     <div className={styles.fieldWrap}>
       <Lock className={styles.fieldIcon} size={20} aria-hidden="true" />
@@ -44,16 +44,21 @@ function PasswordField({
         aria-label={ariaLabel}
         autoComplete={autoComplete}
       />
-      <button
-        className={styles.iconButton}
-        type="button"
-        onClick={onToggle}
-        aria-label={visible ? "Скрыть пароль" : "Показать пароль"}
-      >
+      <button className={styles.iconButton} type="button" onClick={onToggle} aria-label={visible ? "Скрыть пароль" : "Показать пароль"}>
         {visible ? <EyeOff size={20} /> : <Eye size={20} />}
       </button>
     </div>
   );
+}
+
+function firebaseErrorMessage(error) {
+  const code = error?.code || "";
+  if (code === "auth/invalid-credential" || code === "auth/wrong-password") return "Неверный email или пароль";
+  if (code === "auth/user-not-found") return "Пользователь не найден";
+  if (code === "auth/email-already-in-use") return "Этот email уже зарегистрирован";
+  if (code === "auth/too-many-requests") return "Слишком много попыток. Попробуйте позже";
+  if (code === "auth/network-request-failed") return "Проверьте интернет соединение";
+  return "Ошибка авторизации";
 }
 
 export default function AuthPage({ initialTab = "login" }) {
@@ -62,11 +67,11 @@ export default function AuthPage({ initialTab = "login" }) {
   const [activeTab, setActiveTab] = useState(initialTab);
   const [accountType, setAccountType] = useState("client");
   const [phoneLoginMode, setPhoneLoginMode] = useState(false);
-  const [otpStep, setOtpStep] = useState(false);
 
-  const [phone, setPhone] = useState("");
+  const [loginId, setLoginId] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [city, setCity] = useState("Алматы");
   const [eventType, setEventType] = useState("Үйлену той");
   const [businessName, setBusinessName] = useState("");
@@ -76,7 +81,6 @@ export default function AuthPage({ initialTab = "login" }) {
   const [registerPhone, setRegisterPhone] = useState("");
   const [registerPassword, setRegisterPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [otp, setOtp] = useState("");
   const [phoneOnly, setPhoneOnly] = useState("");
 
   const [showLoginPassword, setShowLoginPassword] = useState(false);
@@ -112,115 +116,193 @@ export default function AuthPage({ initialTab = "login" }) {
   function switchTab(tab) {
     setActiveTab(tab);
     setPhoneLoginMode(false);
-    setOtpStep(false);
     resetMessages();
   }
 
-  function finishAuth(user) {
+  function finishAuth(user, route) {
     setSession(user);
     upsertCurrentUser(user);
     setSubmitting(false);
-    router.replace(ROLE_ROUTES[user.role] || "/menu/home");
+    router.push(route || ROLE_ROUTES[user.role] || "/menu/home");
+  }
+
+  async function getUserProfile(uid) {
+    const snap = await get(ref(db, `Users/${uid}`));
+    return snap.exists() ? snap.val() : null;
+  }
+
+  async function findEmailByPhone(phoneValue) {
+    const normalized = normalizePhone(phoneValue);
+
+    try {
+      const normalizedQuery = query(ref(db, "Users"), orderByChild("phoneNumberNormalized"), equalTo(normalized));
+      const snap = await get(normalizedQuery);
+      if (snap.exists()) {
+        const first = Object.values(snap.val())[0];
+        if (first?.email) return normalizeEmail(first.email);
+      }
+
+      const phoneQuery = query(ref(db, "Users"), orderByChild("phoneNumber"), equalTo(normalized));
+      const phoneSnap = await get(phoneQuery);
+      if (phoneSnap.exists()) {
+        const first = Object.values(phoneSnap.val())[0];
+        if (first?.email) return normalizeEmail(first.email);
+      }
+    } catch {
+      return null;
+    }
+
+    return null;
   }
 
   async function handleLogin(e) {
     e.preventDefault();
     setSubmitting(true);
+    resetMessages();
 
-    const safePhone = normalizePhone(phone);
-
-    if (!safePhone || !password) {
+    const safeLoginId = sanitizeText(loginId, 254);
+    if (!safeLoginId || !password) {
       setSubmitting(false);
-      setError("Введите телефон и пароль");
-      return;
-    }
-
-    if (!isValidKazakhstanPhone(safePhone)) {
-      setSubmitting(false);
-      setError("Введите корректный номер телефона");
+      setError("Введите email или телефон и пароль");
       return;
     }
 
     try {
-      // await login({ phone: safePhone, password });
-      const user = makeSessionUser({
-        role: accountType,
-        name: accountType === "vendor" ? "Бизнес аккаунт" : "Гость toi.kz",
-        phone: safePhone,
-        city,
-        businessName: accountType === "vendor" ? "Мой бизнес" : "",
-        status: accountType === "vendor" ? "active" : "active",
-      });
-      setSuccess("Вход выполнен успешно");
-      finishAuth(user);
-    } catch {
+      let loginEmail = "";
+
+      if (safeLoginId.includes("@")) {
+        loginEmail = normalizeEmail(safeLoginId);
+        if (!isValidEmail(loginEmail)) {
+          setSubmitting(false);
+          setError("Введите корректный email");
+          return;
+        }
+      } else {
+        const safePhone = normalizePhone(safeLoginId);
+        if (!isValidKazakhstanPhone(safePhone)) {
+          setSubmitting(false);
+          setError("Введите email или корректный номер +7XXXXXXXXXX");
+          return;
+        }
+
+        loginEmail = await findEmailByPhone(safePhone);
+        if (!loginEmail) {
+          setSubmitting(false);
+          setError("Пользователь с таким номером не найден. Войдите через email или зарегистрируйтесь.");
+          return;
+        }
+      }
+
+      const credential = await signInWithEmailAndPassword(auth, loginEmail, password);
+      const profile = await getUserProfile(credential.user.uid);
+      const role = profile?.role || accountType || "client";
+      const user = {
+        uid: credential.user.uid,
+        role,
+        name: profile?.name || credential.user.displayName || "toi.kz user",
+        phone: profile?.phoneNumber || profile?.phone || credential.user.phoneNumber || "",
+        email: credential.user.email || loginEmail,
+        city: profile?.city || city,
+        businessName: profile?.businessName || "",
+        status: profile?.status || "active",
+        createdAt: profile?.createdAt || new Date().toISOString(),
+      };
+
+      finishAuth(user, role === "vendor" ? "/vendor" : role === "admin" ? "/admin" : "/menu/home");
+    } catch (loginError) {
       setSubmitting(false);
-      setError("Ошибка входа");
-      setSuccess("");
+      setError(firebaseErrorMessage(loginError));
     }
   }
 
   async function handleRegister(e) {
     e.preventDefault();
     setSubmitting(true);
+    resetMessages();
 
     const safeName = sanitizeText(name, 80);
+    const safeEmail = normalizeEmail(email);
     const safePhone = normalizePhone(registerPhone);
     const safeBusinessName = sanitizeText(businessName, 120);
 
-    if (!safeName || !safePhone || !registerPassword || !confirmPassword) {
+    if (!safeName || !safeEmail || !safePhone || !registerPassword || !confirmPassword) {
       setSubmitting(false);
       setError("Заполните все поля");
-      setSuccess("");
       return;
     }
 
-    if (accountType === "vendor" && !safeBusinessName) {
+    if (!isValidEmail(safeEmail)) {
       setSubmitting(false);
-      setError("Укажите название бизнеса");
-      setSuccess("");
+      setError("Введите корректный email");
       return;
     }
 
     if (!isValidKazakhstanPhone(safePhone)) {
       setSubmitting(false);
-      setError("Введите корректный номер телефона");
-      setSuccess("");
+      setError("Введите корректный номер телефона +7XXXXXXXXXX");
       return;
     }
 
     if (registerPassword.length < 6) {
       setSubmitting(false);
       setError("Пароль должен быть минимум 6 символов");
-      setSuccess("");
       return;
     }
 
     if (registerPassword !== confirmPassword) {
       setSubmitting(false);
       setError("Пароли не совпадают");
-      setSuccess("");
+      return;
+    }
+
+    if (accountType === "vendor" && !safeBusinessName) {
+      setSubmitting(false);
+      setError("Укажите название бизнеса");
       return;
     }
 
     try {
-      // await register({ name: safeName, phone: safePhone, password: registerPassword, role: accountType });
+      const credential = await createUserWithEmailAndPassword(auth, safeEmail, registerPassword);
+      await updateProfile(credential.user, { displayName: safeName });
+
+      const profile = {
+        uid: credential.user.uid,
+        name: safeName,
+        email: safeEmail,
+        phoneNumber: safePhone,
+        phoneNumberNormalized: safePhone,
+        role: accountType,
+        city,
+        eventType: accountType === "client" ? eventType : "",
+        businessName: accountType === "vendor" ? safeBusinessName : "",
+        vendorCategory: accountType === "vendor" ? vendorCategory : "",
+        instagram: accountType === "vendor" ? sanitizeText(instagram, 80) : "",
+        whatsapp: accountType === "vendor" ? sanitizeText(whatsapp, 32) : "",
+        status: accountType === "vendor" ? "pendingApproval" : "active",
+        createdAt: Date.now(),
+      };
+
+      await set(ref(db, `Users/${credential.user.uid}`), profile);
+
       const user = makeSessionUser({
         role: accountType,
         name: safeName,
         phone: safePhone,
         city,
         businessName: safeBusinessName,
-        status: accountType === "vendor" ? "pendingApproval" : "active",
+        status: profile.status,
       });
+      user.uid = credential.user.uid;
+      user.email = safeEmail;
+      user.createdAt = new Date(profile.createdAt).toISOString();
 
       if (accountType === "vendor") {
         setStore((current) => ({
           ...current,
           vendors: [
             {
-              id: user.uid,
-              ownerId: user.uid,
+              id: credential.user.uid,
+              ownerId: credential.user.uid,
               businessName: safeBusinessName,
               title: safeBusinessName,
               category: vendorCategory,
@@ -241,58 +323,58 @@ export default function AuthPage({ initialTab = "login" }) {
               availableDates: [],
               createdAt: new Date().toISOString(),
             },
-            ...current.vendors.filter((vendor) => vendor.ownerId !== user.uid),
+            ...current.vendors.filter((vendor) => vendor.ownerId !== credential.user.uid),
           ],
         }));
       }
 
-      setSuccess(accountType === "vendor" ? "Заявка поставщика отправлена на проверку" : "Регистрация успешно завершена");
-      finishAuth(user);
-    } catch {
+      finishAuth(user, accountType === "vendor" ? "/vendor" : "/menu/home");
+    } catch (registerError) {
       setSubmitting(false);
-      setError("Ошибка регистрации");
-      setSuccess("");
+      setError(firebaseErrorMessage(registerError));
     }
   }
 
-  function handleSendCode(e) {
+  function handlePhoneLoginStart() {
+    setPhoneLoginMode(true);
+    setError("");
+    setSuccess("Вход по номеру телефона скоро будет доступен. Сейчас используйте вход по email.");
+  }
+
+  function handlePhoneSubmit(e) {
     e.preventDefault();
-
     const safePhone = normalizePhone(phoneOnly);
-
-    if (!phoneOnly || !isValidKazakhstanPhone(safePhone)) {
+    if (!isValidKazakhstanPhone(safePhone)) {
       showError("Введите корректный номер телефона");
       return;
     }
-
-    setPhoneOnly(safePhone);
-    setOtpStep(true);
+    setSuccess("Вход по номеру телефона скоро будет доступен. Сейчас используйте вход по email.");
     setError("");
-    setSuccess("Код отправлен");
   }
 
-  function handleVerifyOtp(e) {
-    e.preventDefault();
-
-    if (!otp || !/^\d{4,6}$/.test(otp)) {
-      showError("Введите код подтверждения");
+  async function handleForgotPassword() {
+    const safeLoginId = sanitizeText(loginId, 254);
+    if (!safeLoginId || !safeLoginId.includes("@")) {
+      setError("");
+      setSuccess("Введите email, чтобы восстановить пароль");
       return;
     }
 
-    const user = makeSessionUser({
-      role: "client",
-      name: "Гость toi.kz",
-      phone: phoneOnly,
-      city,
-      status: "active",
-    });
-    setSuccess("Вы успешно вошли");
-    finishAuth(user);
-  }
+    const safeEmail = normalizeEmail(safeLoginId);
+    if (!isValidEmail(safeEmail)) {
+      setError("");
+      setSuccess("Введите email, чтобы восстановить пароль");
+      return;
+    }
 
-  function handleForgotPassword() {
-    setError("");
-    setSuccess("Функция восстановления пароля скоро будет доступна");
+    try {
+      await sendPasswordResetEmail(auth, safeEmail);
+      setError("");
+      setSuccess("Письмо для восстановления отправлено");
+    } catch {
+      setError("");
+      setSuccess("Если email зарегистрирован, письмо для восстановления будет отправлено");
+    }
   }
 
   const AccountIcon = accountCopy.icon;
@@ -310,10 +392,7 @@ export default function AuthPage({ initialTab = "login" }) {
         <section className={styles.card} aria-label="Авторизация toi.kz">
           <div className={styles.content}>
             <header className={styles.brand}>
-              <div className={styles.monogram} aria-hidden="true">
-                <span>T</span>
-              </div>
-              <h1 className={styles.logoText}>TOI.KZ</h1>
+              <img className={styles.brandLogo} src="/images/toi-logo.png" alt="toi.kz" />
               <div className={styles.ornamentLine} aria-hidden="true">
                 <span className={styles.diamond} />
               </div>
@@ -357,25 +436,20 @@ export default function AuthPage({ initialTab = "login" }) {
                 {message}
                 <form className={styles.form} onSubmit={handleLogin}>
                   <div className={styles.fieldWrap}>
-                    <Phone className={styles.fieldIcon} size={20} aria-hidden="true" />
-                    <input className={styles.input} type="tel" value={phone} onChange={(e) => setPhone(sanitizeText(e.target.value, 24))} placeholder="+7 (___) ___-__-__" aria-label="Телефон" autoComplete="tel" />
+                    <Mail className={styles.fieldIcon} size={20} aria-hidden="true" />
+                    <input className={styles.input} type="text" value={loginId} onChange={(e) => setLoginId(sanitizeText(e.target.value, 254))} placeholder="Email или телефон" aria-label="Email или телефон" autoComplete="username" />
                   </div>
-
                   <PasswordField value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Пароль" ariaLabel="Пароль" visible={showLoginPassword} onToggle={() => setShowLoginPassword((value) => !value)} />
-
                   <div className={styles.rowEnd}>
                     <button className={styles.linkButton} type="button" onClick={handleForgotPassword}>
                       Забыли пароль?
                     </button>
                   </div>
-
                   <button className={styles.primaryButton} type="submit" disabled={submitting}>
                     {submitting ? "Входим..." : "Войти"}
                   </button>
-
                   <div className={styles.divider}>или</div>
-
-                  <button className={styles.secondaryButton} type="button" onClick={() => { setPhoneLoginMode(true); resetMessages(); }}>
+                  <button className={styles.secondaryButton} type="button" onClick={handlePhoneLoginStart}>
                     <Phone size={20} aria-hidden="true" />
                     Войти по номеру телефона
                   </button>
@@ -387,31 +461,19 @@ export default function AuthPage({ initialTab = "login" }) {
               <div className={styles.formPanel} key="phone-login">
                 <div className={styles.formHeader}>
                   <h2>Вход по номеру телефона</h2>
-                  <p>Введите номер, чтобы получить код подтверждения</p>
+                  <p>Firebase Phone Auth пока не настроен. Используйте email/password.</p>
                 </div>
                 {message}
-                {!otpStep ? (
-                  <form className={styles.form} onSubmit={handleSendCode}>
-                    <div className={styles.fieldWrap}>
-                      <Phone className={styles.fieldIcon} size={20} aria-hidden="true" />
-                      <input className={styles.input} type="tel" value={phoneOnly} onChange={(e) => setPhoneOnly(sanitizeText(e.target.value, 24))} placeholder="+7 (___) ___-__-__" aria-label="Телефон для входа по коду" autoComplete="tel" />
-                    </div>
-                    <button className={styles.primaryButton} type="submit">Получить код</button>
-                    <button className={styles.backButton} type="button" onClick={() => { setPhoneLoginMode(false); setOtpStep(false); resetMessages(); }}>
-                      <ArrowLeft size={18} aria-hidden="true" />
-                      Вернуться
-                    </button>
-                  </form>
-                ) : (
-                  <form className={styles.form} onSubmit={handleVerifyOtp}>
-                    <input className={`${styles.input} ${styles.otpInput}`} inputMode="numeric" maxLength={6} value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))} placeholder="0000" aria-label="Код подтверждения" autoComplete="one-time-code" />
-                    <button className={styles.primaryButton} type="submit">Подтвердить код</button>
-                    <button className={styles.backButton} type="button" onClick={() => { setPhoneLoginMode(false); setOtpStep(false); setOtp(""); resetMessages(); }}>
-                      <ArrowLeft size={18} aria-hidden="true" />
-                      Вернуться
-                    </button>
-                  </form>
-                )}
+                <form className={styles.form} onSubmit={handlePhoneSubmit}>
+                  <div className={styles.fieldWrap}>
+                    <Phone className={styles.fieldIcon} size={20} aria-hidden="true" />
+                    <input className={styles.input} type="tel" value={phoneOnly} onChange={(e) => setPhoneOnly(sanitizeText(e.target.value, 24))} placeholder="+7 (___) ___-__-__" aria-label="Телефон для входа по коду" autoComplete="tel" />
+                  </div>
+                  <button className={styles.primaryButton} type="submit">Проверить номер</button>
+                  <button className={styles.backButton} type="button" onClick={() => { setPhoneLoginMode(false); resetMessages(); }}>
+                    Вернуться
+                  </button>
+                </form>
               </div>
             ) : null}
 
@@ -427,12 +489,14 @@ export default function AuthPage({ initialTab = "login" }) {
                     <User className={styles.fieldIcon} size={20} aria-hidden="true" />
                     <input className={styles.input} type="text" value={name} onChange={(e) => setName(sanitizeText(e.target.value, 80))} placeholder="Ваше имя" aria-label="Имя" autoComplete="name" />
                   </div>
-
+                  <div className={styles.fieldWrap}>
+                    <Mail className={styles.fieldIcon} size={20} aria-hidden="true" />
+                    <input className={styles.input} type="email" value={email} onChange={(e) => setEmail(sanitizeText(e.target.value, 254))} placeholder="Email" aria-label="Email" autoComplete="email" />
+                  </div>
                   <div className={styles.fieldWrap}>
                     <Phone className={styles.fieldIcon} size={20} aria-hidden="true" />
                     <input className={styles.input} type="tel" value={registerPhone} onChange={(e) => setRegisterPhone(sanitizeText(e.target.value, 24))} placeholder="+7 (___) ___-__-__" aria-label="Телефон" autoComplete="tel" />
                   </div>
-
                   <div className={styles.gridFields}>
                     <div className={styles.fieldWrap}>
                       <MapPin className={styles.fieldIcon} size={19} aria-hidden="true" />
@@ -450,7 +514,6 @@ export default function AuthPage({ initialTab = "login" }) {
                       </select>
                     )}
                   </div>
-
                   {accountType === "vendor" ? (
                     <>
                       <div className={styles.fieldWrap}>
@@ -463,12 +526,10 @@ export default function AuthPage({ initialTab = "login" }) {
                       </div>
                     </>
                   ) : null}
-
                   <PasswordField value={registerPassword} onChange={(e) => setRegisterPassword(e.target.value)} placeholder="Придумайте пароль" ariaLabel="Придумайте пароль" visible={showRegisterPassword} onToggle={() => setShowRegisterPassword((value) => !value)} autoComplete="new-password" />
                   <PasswordField value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Повторите пароль" ariaLabel="Повторите пароль" visible={showConfirmPassword} onToggle={() => setShowConfirmPassword((value) => !value)} autoComplete="new-password" />
-
                   <button className={styles.primaryButton} type="submit" disabled={submitting}>
-                    {submitting ? "Отправляем..." : accountType === "vendor" ? "Отправить на проверку" : "Зарегистрироваться"}
+                    {submitting ? "Создаем..." : accountType === "vendor" ? "Отправить на проверку" : "Зарегистрироваться"}
                   </button>
                 </form>
               </div>
@@ -490,7 +551,7 @@ export default function AuthPage({ initialTab = "login" }) {
               </div>
               <div className={styles.feature}>
                 <span className={styles.featureIcon}><Heart size={22} aria-hidden="true" /></span>
-                <span><span className={styles.featureTitle}>Создавайте</span><span className={styles.featureSubtitle}>незабываемые впечатления</span></span>
+                <span><span className={styles.featureTitle}>Создавайте</span><span className={styles.featureSubtitle}>впечатления</span></span>
               </div>
             </div>
           </div>

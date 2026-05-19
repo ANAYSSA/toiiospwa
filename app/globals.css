@@ -144,6 +144,14 @@ img {
   font-weight: 700;
 }
 
+.app-brand-logo {
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
 .app-brand strong {
   display: block;
   letter-spacing: 0.22em;

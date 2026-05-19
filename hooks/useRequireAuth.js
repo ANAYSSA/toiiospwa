@@ -31,6 +31,7 @@ export function useRequireAuth({ allowedRoles = ["client", "vendor", "admin"], r
 
       if (!currentUser) {
         setUser(null);
+        setChecking(false);
         router.replace(redirectTo);
         return;
       }
@@ -44,6 +45,7 @@ export function useRequireAuth({ allowedRoles = ["client", "vendor", "admin"], r
       };
 
       if (!canAccessRole(firebaseUser, allowedRoles)) {
+        setChecking(false);
         router.replace(redirectTo);
         return;
       }
