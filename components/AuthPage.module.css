@@ -215,6 +215,60 @@
   animation: formIn 0.35s ease both;
 }
 
+.roleSwitch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: -14px 0 18px;
+}
+
+.roleOption {
+  min-height: 52px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.68);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  font-size: 13px;
+  font-weight: 700;
+  transition: all 0.22s ease;
+}
+
+.roleOption:hover,
+.roleActive {
+  border-color: rgba(213, 173, 98, 0.42);
+  background: rgba(213, 173, 98, 0.1);
+  color: white;
+}
+
+.accountHint {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding: 14px;
+  border: 1px solid rgba(212, 175, 96, 0.18);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.accountHint svg {
+  color: var(--gold);
+  flex: 0 0 auto;
+}
+
+.accountHint strong {
+  display: block;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 2px;
+}
+
 .formHeader {
   margin-bottom: 26px;
   text-align: center;
@@ -236,6 +290,12 @@
 .form {
   display: grid;
   gap: 16px;
+}
+
+.gridFields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
 }
 
 .fieldWrap {
@@ -261,6 +321,10 @@
   padding: 0 18px 0 52px;
   font-size: 16px;
   transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+}
+
+.input option {
+  color: #141414;
 }
 
 .inputPlain {
@@ -336,6 +400,20 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
+}
+
+.adminLink {
+  width: 100%;
+  margin-top: 18px;
+  border: 0;
+  background: transparent;
+  color: rgba(240, 211, 145, 0.62);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 13px;
+  cursor: pointer;
 }
 
 .primaryButton {
@@ -570,6 +648,16 @@
     gap: 10px;
     margin-top: 30px;
     padding-top: 24px;
+  }
+
+  .roleSwitch,
+  .gridFields {
+    grid-template-columns: 1fr;
+  }
+
+  .roleOption {
+    justify-content: flex-start;
+    padding: 0 16px;
   }
 
   .featureIcon {
