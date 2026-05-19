@@ -11,6 +11,7 @@
     },
 
     "users": {
+      ".indexOn": ["phone", "phoneNumber", "phoneNumberNormalized", "email"],
       "$uid": {
         ".read": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).val() === true)",
         ".write": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).val() === true)",
@@ -115,6 +116,7 @@
     },
 
     "Users": {
+      ".indexOn": ["phoneNumber", "phoneNumberNormalized", "email"],
       "$uid": {
         ".read": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).val() === true)",
         ".write": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).val() === true)"

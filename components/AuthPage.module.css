@@ -7,7 +7,7 @@
   --text: #ffffff;
   --muted: rgba(255, 255, 255, 0.62);
   --border: rgba(212, 175, 96, 0.32);
-  min-height: 100vh;
+  min-height: 100dvh;
   background-image: url('/images/toi-login-bg.png');
   background-size: cover;
   background-position: center;
@@ -66,6 +66,14 @@
 
 .brand {
   text-align: center;
+}
+
+.brandLogo {
+  display: block;
+  width: min(210px, 64%);
+  height: auto;
+  margin: 0 auto 18px;
+  object-fit: contain;
 }
 
 .monogram {
@@ -307,17 +315,17 @@
   left: 18px;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--gold);
+  color: rgba(213, 173, 98, 0.82);
   pointer-events: none;
 }
 
 .input {
   height: 58px;
   width: 100%;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.035);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.045);
   border: 1px solid rgba(212, 175, 96, 0.28);
-  color: white;
+  color: #ffffff;
   padding: 0 18px 0 52px;
   font-size: 16px;
   transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
@@ -336,7 +344,7 @@
 }
 
 .input::placeholder {
-  color: rgba(255, 255, 255, 0.42);
+  color: rgba(255, 255, 255, 0.46);
 }
 
 .input:focus {
@@ -344,6 +352,15 @@
   box-shadow: 0 0 0 3px rgba(213, 173, 98, 0.12);
   outline: none;
   background: rgba(255, 255, 255, 0.052);
+}
+
+.input:-webkit-autofill,
+.input:-webkit-autofill:hover,
+.input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #ffffff;
+  -webkit-box-shadow: 0 0 0 1000px rgba(255, 255, 255, 0.045) inset;
+  caret-color: #ffffff;
+  transition: background-color 9999s ease-in-out 0s;
 }
 
 .iconButton {
@@ -418,6 +435,7 @@
 
 .primaryButton {
   height: 64px;
+  border-radius: 18px;
   background: linear-gradient(135deg, #8a642e, #d5ad62, #f0d391);
   color: white;
   font-weight: 600;
@@ -433,6 +451,7 @@
 
 .secondaryButton {
   height: 58px;
+  border-radius: 18px;
   background: rgba(255, 255, 255, 0.025);
   border: 1px solid rgba(255, 255, 255, 0.16);
   color: white;
@@ -606,19 +625,10 @@
     padding: 36px 24px;
   }
 
-  .monogram {
-    width: 74px;
-    height: 74px;
-    margin-bottom: 16px;
-  }
-
-  .monogram span {
-    font-size: 42px;
-  }
-
-  .logoText {
-    font-size: 38px;
-    letter-spacing: 7px;
+  .brandLogo {
+    width: 170px;
+    max-width: 56%;
+    margin-bottom: 14px;
   }
 
   .ornamentLine {
@@ -680,27 +690,140 @@
   }
 }
 
-@media (max-width: 420px) {
-  .card {
-    border-radius: 28px;
-    padding: 32px 20px;
+@media (max-width: 480px) {
+  .page {
+    min-height: 100dvh;
+    padding: max(14px, env(safe-area-inset-top)) 14px max(14px, env(safe-area-inset-bottom));
+    align-items: flex-start;
   }
 
-  .logoText {
-    font-size: 34px;
-    letter-spacing: 5px;
+  .shell {
+    width: 100%;
+  }
+
+  .card {
+    width: 100%;
+    max-width: 430px;
+    min-height: auto;
+    border-radius: 28px;
+    padding: 28px 20px 22px;
+  }
+
+  .brandLogo {
+    width: 150px;
+    max-width: 58%;
+    margin-bottom: 12px;
+  }
+
+  .ornamentLine {
+    width: 160px;
+    height: 14px;
+    margin: 10px auto 10px;
+  }
+
+  .tagline {
+    font-size: 11px;
+    letter-spacing: 2px;
+    line-height: 1.5;
   }
 
   .tabs {
-    height: 54px;
+    height: 52px;
+    margin: 20px 0 16px;
+    border-radius: 15px;
   }
 
   .tab {
+    font-size: 14px;
+  }
+
+  .roleSwitch {
+    gap: 8px;
+    margin: 0 0 12px;
+  }
+
+  .roleOption {
+    min-height: 44px;
+    border-radius: 14px;
+    font-size: 12px;
+  }
+
+  .accountHint {
+    display: none;
+  }
+
+  .formHeader {
+    margin-bottom: 16px;
+  }
+
+  .formHeader h2 {
+    font-size: 25px;
+    line-height: 1.1;
+  }
+
+  .formHeader p {
+    font-size: 14px;
+  }
+
+  .form {
+    gap: 12px;
+  }
+
+  .message {
+    min-height: 0;
+    margin-bottom: 8px;
+  }
+
+  .input {
+    height: 56px;
+    border-radius: 18px;
     font-size: 15px;
   }
 
+  .primaryButton {
+    height: 58px;
+    border-radius: 18px;
+    font-size: 16px;
+  }
+
+  .secondaryButton {
+    height: 54px;
+    border-radius: 18px;
+    font-size: 15px;
+  }
+
+  .divider {
+    margin: 2px 0;
+  }
+
+  .adminLink {
+    margin-top: 10px;
+  }
+
   .features {
-    grid-template-columns: 1fr;
-    gap: 16px;
+    display: none;
+  }
+
+  .footer {
+    margin-top: 12px;
+  }
+}
+
+@media (max-width: 380px) {
+  .card {
+    padding: 22px 16px 18px;
+    border-radius: 24px;
+  }
+
+  .brandLogo {
+    width: 132px;
+  }
+
+  .tagline {
+    font-size: 10px;
+  }
+
+  .formHeader h2 {
+    font-size: 22px;
   }
 }

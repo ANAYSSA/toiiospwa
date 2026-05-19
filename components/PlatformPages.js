@@ -840,7 +840,7 @@ export function ProfilePage() {
         <section className="premium-card premium-card-inner">
           <form className="page-stack" onSubmit={saveProfile}>
             <div className="list-row">
-              <div className="app-brand-mark" style={{ width: 72, height: 72, fontSize: 36 }}>{profile.name?.[0] || "T"}</div>
+              <img src="/images/toi-logo.png" alt="toi.kz" style={{ width: 72, height: 72, objectFit: "contain", borderRadius: 18, background: "rgba(255,255,255,0.03)" }} />
               <div><h2 style={{ margin: 0 }}>{profile.name || "toi.kz user"}</h2><p className="muted" style={{ margin: "6px 0 0" }}>Для пользователей бесплатно</p></div>
             </div>
             <input className="premium-input" value={profile.name} onChange={(e) => setProfile({ ...profile, name: sanitizeText(e.target.value, 80) })} placeholder="Имя" />
@@ -977,7 +977,7 @@ export function AdminLoginPage() {
   return (
     <main className="app-loader" style={{ padding: 18 }}>
       <section className="premium-card premium-card-inner" style={{ width: "min(460px, 94vw)" }}>
-        <div className="app-brand" style={{ marginBottom: 20 }}><span className="app-brand-mark">T</span><span><strong>TOI.KZ</strong><small>Admin secure entry</small></span></div>
+        <div className="app-brand" style={{ marginBottom: 20 }}><img className="app-brand-logo" src="/images/toi-logo.png" alt="toi.kz" /><span><strong>TOI.KZ</strong><small>Admin secure entry</small></span></div>
         <form className="page-stack" onSubmit={login}>
           <input className="premium-input" value={phone} onChange={(e) => setPhone(sanitizeText(e.target.value, 24))} placeholder="+7..." aria-label="Admin phone" />
           <input className="premium-input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Пароль" aria-label="Admin password" />
@@ -1084,7 +1084,7 @@ export function InvitePage({ eventId }) {
   return (
     <main className="app-loader" style={{ padding: 18 }}>
       <section className="premium-card premium-card-inner" style={{ width: "min(760px, 96vw)", textAlign: "center" }}>
-        <div className="app-brand-mark" style={{ margin: "0 auto 18px", width: 72, height: 72, fontSize: 38 }}>T</div>
+        <img src="/images/toi-logo.png" alt="toi.kz" style={{ display: "block", margin: "0 auto 18px", width: 120, height: "auto" }} />
         <h1 style={{ fontFamily: "Playfair Display, Georgia, serif", fontSize: "clamp(34px, 7vw, 62px)", margin: 0 }}>{invitation.bride || "Bride"} & {invitation.groom || "Groom"}</h1>
         <p className="muted" style={{ fontSize: 18 }}>{invitation.message || "Сізді қуанышымызға ортақтасуға шақырамыз."}</p>
         <div className="grid-3" style={{ marginTop: 24, textAlign: "left" }}>
